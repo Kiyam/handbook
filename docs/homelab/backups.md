@@ -63,22 +63,35 @@ The NAS is the always-on device every laptop and phone syncs with, so it's the o
 
 Copying a database's data directory while it's running can give you a backup that won't open. So once a night, before the file backups run, a systemd timer dumps every database to compressed SQL files with a date in the name:
 
-```bash title="db_backup.sh (simplified)"
+```bash title="db_backup.sh"
 #!/bin/bash
-BACKUPDIR=$HOME/docker/db_backups
+# Nightly dump of every DB container, run by a systemd timer (as root).
+# No passwords: Postgres trusts its local socket, MariaDB reads the root
+# password from its own container environment.
+set -uo pipefail
+BACKUPDIR=${BACKUPDIR:-$HOME/docker/db_backups}
 KEEP_DAYS=2
 STAMP=$(date +%Y%m%d%H%M)
+mkdir -p "$BACKUPDIR"
+status=0
 
-# Postgres: password comes from the container's own environment
-docker exec immich-postgres sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' \
-  | gzip > "$BACKUPDIR/immich_postgres-$STAMP.sql.gz"
+dump() {  # container name, then the command to run inside it
+  local c=$1 out="$BACKUPDIR/$1-$STAMP.sql.gz"
+  shift
+  if docker exec "$c" sh -c "$*" | gzip > "$out" && [ "$(gzip -dc "$out" | head -c 1 | wc -c)" -gt 0 ]; then
+    echo "ok: $c ($(du -h "$out" | cut -f1))"
+  else
+    echo "FAILED: $c" >&2; rm -f "$out"; status=1
+  fi
+}
 
-# MariaDB/MySQL
-docker exec mariadb sh -c 'mariadb-dump -u root -p"$MARIADB_ROOT_PASSWORD" paperless' \
-  | gzip > "$BACKUPDIR/paperless_mysql-$STAMP.sql.gz"
+for c in immich-postgres miniflux-db forgejo-db; do   # every Postgres container
+  dump "$c" 'exec pg_dumpall -U "${POSTGRES_USER:-postgres}"'
+done
+dump mariadb 'exec mariadb-dump -uroot -p"$MYSQL_ROOT_PASSWORD" --all-databases --single-transaction'
 
-# Keep only the last few days locally; restic keeps the history
-find "$BACKUPDIR" -name '*.sql.gz' -mtime +$KEEP_DAYS -delete
+find "$BACKUPDIR" -name "*.sql.gz" -mtime +$KEEP_DAYS -delete
+exit $status
 ```
 
 ```ini title="/etc/systemd/system/docker-db-backup.timer"
@@ -92,8 +105,12 @@ WantedBy=timers.target
 
 Only two days are kept locally, because the `db_backups/` folder is included in the restic backup, which holds the long history.
 
-!!! tip
-    Read the password from the container's environment (`sh -c '... $POSTGRES_PASSWORD'`) rather than writing it into the script. Then the script contains no secrets and can live in git.
+Some details:
+
+- **No secrets in the script.** The official Postgres image trusts connections over the local socket *inside* the container, so `docker exec … pg_dump` needs no password. For MariaDB, the single quotes mean `$MYSQL_ROOT_PASSWORD` is expanded inside the container, from its own environment. The script can therefore live in git.
+- **`pg_dumpall` / `--all-databases`** dump everything in each container, so the script doesn't need to know any database or user names. Restore a `pg_dumpall` file with `psql -U postgres -f dump.sql`.
+- **`--single-transaction`** gives a consistent MariaDB dump without locking tables.
+- **Empty dumps count as failures.** A container that's gone or renamed otherwise leaves a 20-byte `.gz` every night that looks like a backup. The non-zero exit status marks the systemd unit as failed, which shows up in monitoring.
 
 ## restic and Backrest
 
