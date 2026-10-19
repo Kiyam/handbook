@@ -2,5 +2,4 @@
 
 Notes on Claude, Claude Code and skills.
 
-!!! note
-    Nothing here yet.
+- [Claude Code setup](claude-code-setup.md) — caveman, ponytail, other plugins and hooks

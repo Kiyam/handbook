@@ -13,7 +13,10 @@ nav = [
     "terminal/index.md",
     { "Terminal setup" = "terminal/terminal-setup.md" },
   ] },
-  { "Claude" = ["claude/index.md"] },
+  { "Claude" = [
+    "claude/index.md",
+    { "Claude Code setup" = "claude/claude-code-setup.md" },
+  ] },
   { "HPC" = ["hpc/index.md"] },
   { "Homelab" = ["homelab/index.md"] },
 ]
