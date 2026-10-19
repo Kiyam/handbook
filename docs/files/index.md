@@ -8,7 +8,7 @@ flowchart LR
         laptops["Laptops"]
         servers["Servers<br/>(Docker host, workstation)"]
         nasdata["NAS data<br/>(photos, files, library)"]
-        vms["Proxmox VMs"]
+        vms["Proxmox VMs & LXCs"]
     end
     subgraph siteA["Site A"]
         nasA["Backup NAS A<br/>restic repos"]
@@ -30,6 +30,6 @@ The NAS holds the primary copy of everything. [Syncthing](sync.md) puts its fold
 |---|---|
 | [File sync](sync.md) | **Syncthing** keeps the same folders on every device that needs them, with the NAS as the always-on hub. |
 | [Samba](samba.md) | **SMB shares** let other machines and apps use the NAS's files without their own copy. |
-| [Backups](backups.md) | **restic** for files and **Proxmox Backup Server** for VMs to two NAS boxes at two physical sites. |
+| [Backups](backups.md) | **restic** for files and **Proxmox Backup Server** for VMs and LXCs, to two NAS boxes at two physical sites. |
 
 Each layer does one job. Sync and shares make files *available*. Only the backups make them *safe*.

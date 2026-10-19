@@ -1,6 +1,6 @@
 # Backups
 
-Backups are done with two tools: **[restic](#restic-and-backrest)** for files, and **[Proxmox Backup Server](#proxmox-backups)** for whole VMs. File sync is *not* part of this. [Syncthing](sync.md) puts files on devices, which is a different job.
+Backups are done with two tools: **[restic](#restic-and-backrest)** for files, and **[Proxmox Backup Server](#proxmox-backups)** for whole VMs and LXC containers. File sync is *not* part of this. [Syncthing](sync.md) puts files on devices, which is a different job.
 
 !!! warning "Three things that are not backups"
     - **Sync** (Syncthing, Dropbox). Delete or encrypt a file on one device and the deletion syncs everywhere within seconds.
@@ -19,7 +19,7 @@ flowchart LR
         laptops["Laptops"]
         servers["Servers<br/>(Docker host, workstation)"]
         nasdata["NAS data<br/>(photos, files, library)"]
-        vms["Proxmox VMs"]
+        vms["Proxmox VMs & LXCs"]
     end
     subgraph siteA["Site A"]
         nasA["Backup NAS A<br/>restic repos"]
@@ -36,14 +36,14 @@ flowchart LR
 ```
 
 - **Files go to both sites directly.** Each machine has one restic repository per backup NAS, with the same paths and schedule but run at different times. You could instead back up to one repo and `restic copy` it to the second, but two independent repos mean one corrupted repo can't spread to the other.
-- **VMs go to one PBS, which syncs to the other.** PBS has built-in [sync jobs](https://pbs.proxmox.com/docs/managing-remotes.html) that pull a datastore from a remote PBS, so the hypervisor only uploads each backup once.
+- **VMs and LXCs go to one PBS, which syncs to the other.** PBS has built-in [sync jobs](https://pbs.proxmox.com/docs/managing-remotes.html) that pull a datastore from a remote PBS, so the hypervisor only uploads each backup once.
 - **Each site's NAS stays independent.** It isn't a mirror of the other: a mistake replicated instantly to both copies is the failure this setup exists to avoid.
 
 | Layer | Tool | Protects against |
 |---|---|---|
 | Database dumps | [systemd timer + `pg_dumpall`](#database-dumps) | A corrupted or half-written database inside a file-level backup. |
 | Files → both NAS boxes | [restic + Backrest](#restic-and-backrest) | Deletion, ransomware, losing a whole site. Versioned back two years. |
-| VMs → PBS | [Proxmox Backup Server](#proxmox-backups) | A VM's OS disk dying, or a bad upgrade. Restore the whole VM in minutes. |
+| VMs & LXCs → PBS | [Proxmox Backup Server](#proxmox-backups) | A guest's OS disk dying, or a bad upgrade. Restore the whole VM or container in minutes. |
 | Backup NAS disks | [mergerfs + SnapRAID](#snapraid-and-mergerfs) | One disk in a backup NAS dying. |
 
 ### The night
@@ -53,7 +53,7 @@ Jobs are staggered so they don't compete for disks and bandwidth:
 | Time (UTC) | Job |
 |---|---|
 | 00:00 | Database dumps on the Docker host |
-| 01:30 | Proxmox backs up all VMs to PBS |
+| 01:30 | Proxmox backs up all VMs and LXCs to PBS |
 | 02:30 | Backrest on the NAS → backup NAS |
 | 03:30 | Backrest on the Docker host → backup NAS |
 | 05:00 (local) | SnapRAID diff / sync / scrub on the backup NAS |
@@ -162,18 +162,18 @@ restic mount /mnt/restic                            # or browse every snapshot a
 
 ## Proxmox backups
 
-The hypervisor backs up every VM nightly to a [Proxmox Backup Server](https://www.proxmox.com/en/products/proxmox-backup-server/overview) (PBS) at the second site, over Tailscale. PBS deduplicates across VMs and nights, so keeping many restore points costs little space.
+The hypervisor backs up every guest, both VMs and LXC containers, nightly to a [Proxmox Backup Server](https://www.proxmox.com/en/products/proxmox-backup-server/overview) (PBS) at the second site, over Tailscale. PBS deduplicates across guests and nights, so keeping many restore points costs little space.
 
 ```text title="Datacenter → Backup job"
 schedule    01:30
-selection   all VMs (minus a few excluded ones)
-mode        snapshot     # VM keeps running during the backup
+selection   all guests, VMs and LXCs (minus a few excluded ones)
+mode        snapshot     # guest keeps running during the backup
 fleecing    on           # buffer writes locally so a slow link doesn't stall the VM
 compress    zstd
 storage     pbs          # the remote PBS datastore
 ```
 
-The data disks passed through to the VMs (the NAS's storage, the Docker host's media pool) are each marked **`backup=0`** in the VM's hardware settings, so the job only takes the OS disks. Those are what you need to get a VM booting again after a failure or a bad upgrade. The data on the other disks is covered by restic instead, file by file.
+The data disks passed through to the VMs (the NAS's storage, the Docker host's media pool) are each marked **`backup=0`** in the VM's hardware settings, so the job only takes the OS disks. Mount points on LXC containers have the same `backup` flag. Those are what you need to get a VM booting again after a failure or a bad upgrade. The data on the other disks is covered by restic instead, file by file.
 
 !!! tip
     Add PBS as storage with an [API token](https://pbs.proxmox.com/docs/user-management.html#api-tokens) that only has backup permissions on one datastore, rather than the root password.
@@ -215,4 +215,4 @@ A backup you've never restored from is a hope, not a backup. Every so often:
 
 - restore one service's folder from restic into `/tmp` and check it opens;
 - load last night's database dump into a throwaway container;
-- restore a VM from PBS as a new VM ID, boot it with networking off, and then delete it.
+- restore a VM or LXC from PBS under a new ID, boot it with networking off, and then delete it.
