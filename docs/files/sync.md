@@ -68,17 +68,27 @@ Pair devices by device ID in the web UI, then share a folder from one side and a
 ## Settings worth changing
 
 - **File versioning on the NAS.** In each folder's settings on the NAS, set *File Versioning* to **Simple** or **Staggered**. Files deleted or replaced from another device are moved into `.stversions/` instead of being removed. Only the hub needs it, so laptops don't fill up with old versions.
-- **`.stignore`** in a folder's root keeps junk out of the sync:
+- **`.stignore`: ignore everything, then include what you want.** I don't list what to leave *out*. I list what to sync, and end the file with `*` so everything else is ignored:
 
     ```text title=".stignore"
+    // Junk first, so it's dropped even inside included folders
     (?d).DS_Store
     (?d)Thumbs.db
     node_modules
     .venv
-    *.tmp
+
+    // What to sync
+    !/Documents
+    !/Papers
+    !/notes.md
+
+    // Everything else
+    *
     ```
 
-    The `(?d)` prefix lets Syncthing delete these files if they're the only thing stopping a folder from being removed.
+    Patterns are read top to bottom and **the first match wins**, so the `!` includes must come before the final `*`. The advantage is that nothing appears on every device by accident. A new folder, a big download or an app's cache stays local until you add it to the list.
+
+    The `(?d)` prefix lets Syncthing delete those files when they're the only thing stopping a folder from being removed. `.stignore` itself isn't synced, so each device keeps its own. To share one list, put the patterns in a synced file and add `#include .stglobalignore` to each device's `.stignore`.
 
 - **Watch for changes** (on by default) syncs within seconds of a save. The full rescan interval can then be long, such as an hour, which keeps the disks quiet.
 - **Over Tailscale**, devices find each other on the tailnet without relays. Syncthing also encrypts everything itself, so nothing else is needed.
