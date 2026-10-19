@@ -20,7 +20,11 @@ nav = [
     "claude/index.md",
     { "Claude Code setup" = "claude/claude-code-setup.md" },
   ] },
-  { "HPC" = ["hpc/index.md"] },
+  { "HPC" = [
+    "hpc/index.md",
+    { "Containers with Apptainer" = "hpc/containers.md" },
+    { "Working on clusters" = "hpc/working-on-clusters.md" },
+  ] },
   { "Homelab" = ["homelab/index.md"] },
 ]
 
