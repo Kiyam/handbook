@@ -1,0 +1,11 @@
+# Build output
+site/
+.cache/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# OS
+.DS_Store
