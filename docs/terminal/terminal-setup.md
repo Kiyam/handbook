@@ -2,7 +2,115 @@
 
 Bare terminal can be quite challenging to navigate, but there are a bunch of nice to haves that can make it both more aesthetic, but also more efficient.
 
-We’re not going to cover things like tmux (Herdr, the new kid in town) or oh-my-zsh as those are so ubiquitous. I (Kiyam) typically manage my dotfiles with `chezmoi` which is covered later on, but if you don’t want to read all of the below feel free to just look at my dotfiles repo: [Kiyam/dotfiles](https://github.com/Kiyam/dotfiles)
+tmux and Herdr (the new kid in town) get [their own page](tmux-herdr.md), and so does [Neovim](neovim.md). We’re not going to cover installing oh-my-zsh itself as it's so ubiquitous, but the plugins I use with it are below. I (Kiyam) typically manage my dotfiles with `chezmoi` which is covered later on, but if you don’t want to read all of the below feel free to just look at my dotfiles repo: [Kiyam/dotfiles](https://github.com/Kiyam/dotfiles)
+
+## Terminal emulator: Ghostty
+
+Link: [ghostty.org](https://ghostty.org)
+
+Fast, native, and needs very little config. Mine is the whole file:
+
+```ini title="~/.config/ghostty/config"
+theme = catppuccin-macchiato.conf
+font-family = SpaceMono Nerd Font
+font-size = 16
+shell-integration-features = ssh-terminfo,ssh-env
+clipboard-read = allow
+clipboard-write = allow
+```
+
+- **A Nerd Font** is what makes the icons from `eza --icons`, the prompt and tmux show up properly instead of as boxes. Any [Nerd Font](https://www.nerdfonts.com) works. For mine, run `brew install --cask font-space-mono-nerd-font`.
+- **`ssh-terminfo,ssh-env`** fixes the classic "unknown terminal type" / broken backspace problem when you SSH into a server that has never heard of Ghostty. `ssh-terminfo` installs Ghostty's terminfo on the remote host, and `ssh-env` falls back to a compatible `TERM` when that isn't possible.
+- **`clipboard-read/write = allow`** lets programs use the clipboard through OSC 52 without a prompt every time. This is how copying in Neovim or tmux on a *remote* machine ends up in the Mac's clipboard (see the [Neovim](neovim.md) and [tmux](tmux-herdr.md) pages).
+
+## Shell: zsh
+
+### Keep the home folder tidy with `ZDOTDIR`
+
+Later on I mention keeping zsh config in `~/.config/zsh/` rather than `~/`. zsh always reads `~/.zshenv` first, before it knows about any other directory, so that one file has to stay in the home folder. Its only job is to point zsh somewhere else:
+
+```bash title="~/.zshenv"
+export XDG_CONFIG_HOME="$HOME/.config"
+export ZDOTDIR="$XDG_CONFIG_HOME/zsh"
+```
+
+After that, zsh looks for `.zshrc` (and friends) in `~/.config/zsh/`.
+
+### Prompt: Spaceship
+
+Link: [spaceship-prompt.sh](https://spaceship-prompt.sh)
+
+Spaceship is a prompt that shows git branch and status, the language versions in use, execution time, etc., only when they're relevant.
+
+=== "macOS"
+
+    ```bash
+    brew install spaceship
+    ```
+
+    ```bash title="~/.config/zsh/.zshrc"
+    export SPACESHIP_PROMPT_ASYNC=false
+    source $(brew --prefix)/opt/spaceship/spaceship.zsh
+    ```
+
+=== "Linux"
+
+    Install it as an oh-my-zsh theme:
+
+    ```bash
+    git clone --depth=1 https://github.com/spaceship-prompt/spaceship-prompt.git "$ZSH_CUSTOM/themes/spaceship-prompt"
+    ln -s "$ZSH_CUSTOM/themes/spaceship-prompt/spaceship.zsh-theme" "$ZSH_CUSTOM/themes/spaceship.zsh-theme"
+    ```
+
+    ```bash title="~/.config/zsh/.zshrc"
+    ZSH_THEME="spaceship"
+    ```
+
+### oh-my-zsh plugins
+
+```bash title="~/.config/zsh/.zshrc"
+plugins=(
+  git
+  urltools
+  bgnotify
+  zsh-autosuggestions
+  zsh-vi-mode
+  zsh-syntax-highlighting
+)
+source $ZSH/oh-my-zsh.sh
+```
+
+- `git`: lots of short git aliases (`gst`, `gco`, `gp`, …).
+- `urltools`: `urlencode` / `urldecode` on the command line.
+- `bgnotify`: sends a desktop notification when a long-running command finishes and the terminal isn't focused. Great for builds.
+- [`zsh-autosuggestions`](https://github.com/zsh-users/zsh-autosuggestions): suggests the rest of the command in grey from your history. Press → to accept.
+- [`zsh-vi-mode`](https://github.com/jeffreytse/zsh-vi-mode): proper vim keybindings on the command line (`Esc`, then `b`, `w`, `ciw`, …).
+- [`zsh-syntax-highlighting`](https://github.com/zsh-users/zsh-syntax-highlighting): colours commands as you type them, and turns a typo'd command red *before* you hit enter.
+
+The first three ship with oh-my-zsh. The last three need cloning into the custom plugins folder first:
+
+```bash
+git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
+git clone https://github.com/zsh-users/zsh-syntax-highlighting "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
+git clone https://github.com/jeffreytse/zsh-vi-mode "$ZSH_CUSTOM/plugins/zsh-vi-mode"
+```
+
+!!! tip
+    `zsh-vi-mode` sets up its own keybindings when it loads. Load anything that binds keys, such as fzf's `Ctrl+T` / `Alt+C` and Atuin's up arrow, *after* `source $ZSH/oh-my-zsh.sh`, as in my `.zshrc`, so it doesn't get overwritten.
+
+### Completions: carapace
+
+Link: [carapace.sh](https://carapace.sh)
+
+Tab completion for hundreds of CLI tools (git, docker, kubectl, gh, …), including descriptions of each flag. With bridges, it also falls back to zsh, fish, bash and inshellisense completions for anything it doesn't know itself.
+
+```bash title="~/.config/zsh/.zshrc"
+export CARAPACE_BRIDGES='zsh,fish,bash,inshellisense'
+zstyle ':completion:*' format $'\e[2;37mCompleting %d\e[m'
+source <(carapace _carapace)
+```
+
+The `zstyle` line adds a dim "Completing …" header above each group of completions.
 
 ## Must have tools
 
@@ -10,7 +118,13 @@ We’re not going to cover things like tmux (Herdr, the new kid in town) or oh-m
 
     Link: [github.com/ajeetdsouza/zoxide](https://github.com/ajeetdsouza/zoxide)
 
-    It can be rebound to replace the `cd` command, but by default it binds itself to `z` . Its main uses are being able to remember paths of folders you have previously cd’ed to. So for example on hypatia for the user klin, as they often visit /share/rcif2/klin/kids_legacy/sim_output, instead of typing cd that full path, they can just type `cd sim_output` and it will take them directly to the most visited path instead. This is the main use case.
+    It can be rebound to replace the `cd` command, but by default it binds itself to `z` . I rebind it, so `cd` itself gets the memory:
+
+    ```bash
+    eval "$(zoxide init zsh --cmd cd)"
+    ```
+
+    Its main uses are being able to remember paths of folders you have previously cd’ed to. So for example on hypatia for the user klin, as they often visit /share/rcif2/klin/kids_legacy/sim_output, instead of typing cd that full path, they can just type `cd sim_output` and it will take them directly to the most visited path instead. This is the main use case.
 
 - `eza` - a replacement for `ls` with colours and highlighting.
 
@@ -104,3 +218,33 @@ We’re not going to cover things like tmux (Herdr, the new kid in town) or oh-m
     Another note, for config files, like a .zshrc file, typically this would live in `~/.zshrc` , but, thanks to the whole `$XDG_CONFIG_HOME` convention, which typically points to `~/.config/` , we can store files in a .config folder instead making the home folder `~/`  much neater. So a .zshrc file could live instead at `~/.config/zsh/.zshrc` . Tmux however is a bit odd in that it needs `~/.config/tmux/tmux.conf` without the usual dot in front of the tmux.conf file.
 
     As a headstart, this is my dotfiles repo, and you can see how some templating has been handled for use across hypatia and a few other linux machines/mac etc: [Kiyam/dotfiles](https://github.com/Kiyam/dotfiles)
+
+## Smaller swaps
+
+Same idea as `eza` and `bat`: better versions of everyday tools.
+
+- [`duf`](https://github.com/muesli/duf) replaces `df`. It shows disk usage as a readable coloured table. I alias it and hide the snap/squashfs mounts that clutter the output on Ubuntu:
+
+    ```bash
+    alias df="duf --hide-fs squashfs"
+    ```
+
+- [`ripgrep`](https://github.com/BurntSushi/ripgrep) (`rg`) replaces `grep -r`. It's much faster and skips anything in `.gitignore` by default.
+- [`btop`](https://github.com/aristocratos/btop) replaces `top`/`htop`. It shows CPU, memory, disks, network and processes in one screen.
+- [`lazygit`](https://github.com/jesseduffield/lazygit) is a git TUI. Staging individual lines, interactive rebases and resolving conflicts are much nicer than on the bare command line.
+- [`vivid`](https://github.com/sharkdp/vivid) generates `LS_COLORS`, which sets the colours `eza` and zsh's completion menu use for file types. See the next section.
+
+## One colour scheme everywhere
+
+Everything uses [Catppuccin](https://catppuccin.com) **Macchiato**, so the terminal, prompt, file listings, fuzzy finder, tmux and editor all match:
+
+| Where | How |
+|---|---|
+| Ghostty | `theme = catppuccin-macchiato.conf` |
+| File colours (`eza`, completions) | `export LS_COLORS="$(vivid generate catppuccin-macchiato)"` |
+| fzf | The `FZF_DEFAULT_OPTS` colours above |
+| tmux | The [catppuccin/tmux](https://github.com/catppuccin/tmux) plugin with `@catppuccin_flavor "macchiato"` |
+| Neovim | `colorscheme = "catppuccin-macchiato"` |
+| btop, Herdr | Their `TTY` / `terminal` themes, which inherit Ghostty's palette |
+
+The simplest trick is the last row: wherever a tool offers a "use the terminal's colours" theme, pick it, and it follows Ghostty automatically.

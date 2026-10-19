@@ -186,9 +186,7 @@ A `PreToolUse` hook stops any Bash command containing a recursive `rm` and asks 
 
 The statusline shows the caveman and ponytail mode badges plus my plan usage on one line:
 
-```text
-[CAVEMAN] [PONYTAIL]  ·  session 42% · 2h10m · weekly 18% · $3.2 session
-```
+<pre class="terminal-preview"><span class="c172">[CAVEMAN]</span> <span class="c108">[PONYTAIL]</span>  <span class="dim">·</span>  <span class="green">session 42%</span><span class="dim"> · 2h10m</span> · <span class="green">weekly 18%</span> · <span class="dim">$3.2 session</span></pre>
 
 - **Caveman badge:** `[CAVEMAN]`, or `[CAVEMAN:ULTRA]` etc. at levels other than `full`. If `/caveman-stats` has run at least once, the lifetime tokens saved follow the badge. Set `CAVEMAN_STATUSLINE_SAVINGS=0` to hide that.
 - **Ponytail badge:** `[PONYTAIL]` in green, or `[PONYTAIL:LITE]` etc. at other levels. `ULTRA` shows in amber. It comes from `hooks/ponytail-statusline.sh`, which ships with the plugin. It doesn't use the JSON from Claude Code, so the wrapper calls it without piping anything in.

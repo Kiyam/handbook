@@ -6,12 +6,15 @@ site_url = "https://kiyam.github.io/handbook/"
 repo_url = "https://github.com/Kiyam/handbook"
 repo_name = "Kiyam/handbook"
 edit_uri = "edit/main/docs/"
+extra_css = ["stylesheets/extra.css"]
 
 nav = [
   { "Home" = "index.md" },
   { "Terminal" = [
     "terminal/index.md",
     { "Terminal setup" = "terminal/terminal-setup.md" },
+    { "Neovim" = "terminal/neovim.md" },
+    { "tmux & Herdr" = "terminal/tmux-herdr.md" },
   ] },
   { "Claude" = [
     "claude/index.md",

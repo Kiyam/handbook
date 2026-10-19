@@ -1,0 +1,15 @@
+/* Terminal-style preview, Catppuccin Macchiato like Ghostty */
+.terminal-preview {
+  background: #24273a;
+  color: #cad3f5;
+  padding: 0.8em 1em;
+  border-radius: 0.2rem;
+  overflow-x: auto;
+  font-family: var(--md-code-font-family);
+  font-size: 0.85em;
+  white-space: pre;
+}
+.terminal-preview .dim { opacity: 0.6; }
+.terminal-preview .green { color: #a6da95; }
+.terminal-preview .c172 { color: #d78700; } /* xterm-256 colour 172 */
+.terminal-preview .c108 { color: #87af87; } /* xterm-256 colour 108 */
