@@ -127,7 +127,7 @@ set -g set-clipboard on
 
 ### Linux-only bits
 
-My tmux config is a chezmoi template, and a few lines only apply on Linux servers:
+My tmux config is a [chezmoi](terminal-setup.md#chezmoi) template, and a few lines only apply on Linux servers:
 
 ```bash
 {{ if ne .chezmoi.os "darwin" }}

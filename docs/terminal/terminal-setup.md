@@ -2,7 +2,7 @@
 
 Bare terminal can be quite challenging to navigate, but there are a bunch of nice to haves that can make it both more aesthetic, but also more efficient.
 
-tmux and Herdr (the new kid in town) get [their own page](tmux-herdr.md), and so does [Neovim](neovim.md). We’re not going to cover installing oh-my-zsh itself as it's so ubiquitous, but the plugins I use with it are below. I (Kiyam) typically manage my dotfiles with `chezmoi` which is covered later on, but if you don’t want to read all of the below feel free to just look at my dotfiles repo: [Kiyam/dotfiles](https://github.com/Kiyam/dotfiles)
+tmux and Herdr (the new kid in town) get [their own page](tmux-herdr.md), and so does [Neovim](neovim.md). We’re not going to cover installing oh-my-zsh itself as it's so ubiquitous, but the plugins I use with it are below. I (Kiyam) typically manage my dotfiles with [`chezmoi`](#chezmoi) which is covered later on, but if you don’t want to read all of the below feel free to just look at my dotfiles repo: [Kiyam/dotfiles](https://github.com/Kiyam/dotfiles)
 
 ## Terminal emulator: Ghostty
 
@@ -211,7 +211,7 @@ The `zstyle` line adds a dim "Completing …" header above each group of complet
 
     By pressing the up arrow, one gets presented with a searchable list of my shell history. The gif from their github repo is what’s pasted up above.
 
-- `Chezmoi` - Now all of this is a lot to manage, especially as each tool has a thing to go into your .zshrc files etc. So a great way to manage these config files that live in your home directory of `~/` is to manage them with a tool like `chezmoi` . There are a few other tools that accomplish something similar, but I like `chezmoi` due to its ability to handle machine to machine differences. You can configure it write different config files to different types of machines. Like on a mac we have homebrew, so things can be located with brew, whereas on a regular linux machine one would need different options. Then on a cluster where one doesn’t have root access, a lot of software might get installed to ~/.local/usr/bin instead. Those differences can all be handled by chezmoi.
+- `Chezmoi`{ #chezmoi } - Now all of this is a lot to manage, especially as each tool has a thing to go into your .zshrc files etc. So a great way to manage these config files that live in your home directory of `~/` is to manage them with a tool like `chezmoi` . There are a few other tools that accomplish something similar, but I like `chezmoi` due to its ability to handle machine to machine differences. You can configure it write different config files to different types of machines. Like on a mac we have homebrew, so things can be located with brew, whereas on a regular linux machine one would need different options. Then on a cluster where one doesn’t have root access, a lot of software might get installed to ~/.local/usr/bin instead. Those differences can all be handled by chezmoi.
 
     Link: [www.chezmoi.io](https://www.chezmoi.io/)
 

@@ -2,7 +2,7 @@
 
 I use [Neovim](https://neovim.io) with the [LazyVim](https://www.lazyvim.org) distribution. LazyVim provides a complete IDE-like setup (LSP, completion, telescope-style pickers, git signs, file tree) out of the box, so my own config is just a few small overrides on top.
 
-The config lives in my dotfiles under [`private_dot_config/nvim`](https://github.com/Kiyam/dotfiles/tree/master/private_dot_config/nvim) and is applied by chezmoi.
+The config lives in my dotfiles under [`private_dot_config/nvim`](https://github.com/Kiyam/dotfiles/tree/master/private_dot_config/nvim) and is applied by [chezmoi](terminal-setup.md#chezmoi).
 
 ## Install
 
