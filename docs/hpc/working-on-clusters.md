@@ -147,6 +147,50 @@ exec srun -p <gpu-partition> --gres=gpu:1 -c 8 --mem=64G -t 04:00:00 "$@" \
 
 Extra arguments come before `--pty`, so they override the defaults.
 
+## Notebooks on a compute node
+
+Notebook servers ([marimo](https://marimo.io) or Jupyter) shouldn't run on the login node. Run them inside a job on a compute node, then tunnel the port back to your laptop through the same jump hosts you use for SSH.
+
+**1. Start the server in a job** and note which node it lands on:
+
+```bash title="scripts/notebook.sbatch"
+#!/bin/bash
+#SBATCH -J notebook
+#SBATCH -p <gpu-partition>
+#SBATCH --gres=gpu:1
+#SBATCH -c 8
+#SBATCH --mem=64G
+#SBATCH -t 08:00:00
+#SBATCH -o logs/%x-%j.log
+
+cd "$SLURM_SUBMIT_DIR"
+source scripts/env.sh
+PORT=$(shuf -i 20000-29999 -n 1)              # avoid clashing with other users on the node
+echo "node=$(hostname) port=$PORT"
+marimo edit --headless --host 127.0.0.1 --port "$PORT" notebooks/
+# or: jupyter lab --no-browser --ip 127.0.0.1 --port "$PORT"
+```
+
+```bash
+sbatch scripts/notebook.sbatch
+grep node= logs/notebook-<jobid>.log         # e.g. node=gpu-node-07 port=24817
+```
+
+Binding to `127.0.0.1` means only someone already logged into that node can reach it. marimo and Jupyter also print a URL with an access token; copy it from the same log.
+
+**2. Tunnel from your laptop.** `-J` reuses the login node as a jump host, so the forward goes straight to the compute node:
+
+```bash
+ssh -N -L 24817:127.0.0.1:24817 -J <cluster> <user>@gpu-node-07
+```
+
+Then open `http://localhost:24817` (with the token) in your browser. `-N` means "no shell, just the tunnel"; stop it with `Ctrl-C`.
+
+!!! tip
+    - If compute nodes aren't reachable by SSH at all, tunnel to the login node instead and chain the second hop there: `ssh -L 24817:gpu-node-07:24817 <cluster>`. This works if the server binds to `0.0.0.0`, but then anyone on the cluster network can reach it, so rely on the token.
+    - `scancel <jobid>` when you're done. An idle notebook job still holds the GPU for its whole time limit.
+    - For non-interactive runs, `sbatch scripts/gpu.sbatch marimo export html notebooks/nb.py -o results/nb.html` runs a marimo notebook as a batch job and saves the output.
+
 ## GPU Python environments
 
 When not using a [container](containers.md), I use a uv venv plus the cluster's CUDA module. The script below is sourced by both the batch script and the interactive shell above:

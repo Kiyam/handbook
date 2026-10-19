@@ -30,6 +30,8 @@ The Docker host keeps each service's config and databases on its own disk, and m
 - **Autoheal.** Containers with a `healthcheck:` that turn unhealthy are restarted automatically. Add a healthcheck to anything that tends to hang rather than crash.
 - **Mailrise.** Turns email into push notifications, for software that can only send alerts by email.
 
+How all of these reach my phone is on [Notifications](notifications.md).
+
 ## Backups
 
 Backups have their own section: see [Files → Backups](../files/backups.md) for restic/Backrest, Proxmox Backup Server, database dumps and SnapRAID.

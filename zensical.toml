@@ -34,8 +34,11 @@ nav = [
   ] },
   { "Homelab" = [
     "homelab/index.md",
+    { "Proxmox" = "homelab/proxmox.md" },
+    { "Network" = "homelab/network.md" },
     { "Docker stack" = "homelab/docker.md" },
     { "Services & monitoring" = "homelab/services.md" },
+    { "Notifications" = "homelab/notifications.md" },
   ] },
 ]
 
