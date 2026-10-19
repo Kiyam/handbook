@@ -39,9 +39,6 @@ flowchart LR
 - **VMs go to one PBS, which syncs to the other.** PBS has built-in [sync jobs](https://pbs.proxmox.com/docs/managing-remotes.html) that pull a datastore from a remote PBS, so the hypervisor only uploads each backup once.
 - **Each site's NAS stays independent.** It isn't a mirror of the other: a mistake replicated instantly to both copies is the failure this setup exists to avoid.
 
-!!! note "Where I am now"
-    The offsite half is done. The servers, the NAS's data and every VM back up nightly to the NAS and PBS at the second site. The next step is the matching set of repos at the main site, so a restore doesn't need a slow pull over the internet.
-
 | Layer | Tool | Protects against |
 |---|---|---|
 | Database dumps | [systemd timer + `pg_dumpall`](#database-dumps) | A corrupted or half-written database inside a file-level backup. |
