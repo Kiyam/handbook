@@ -29,6 +29,56 @@ name = "terminal"
 auto_switch = false
 ```
 
+### Remote machines
+
+The Mac runs the Herdr client, and my two Linux servers are saved as **SSH machines**. All three appear in one sidebar: local workspaces plus each server's workspaces. The agent list covers every machine, so I can see at a glance which Claude Code session, wherever it's running, is waiting for an answer.
+
+| Machine | What it is | Hardware |
+|---|---|---|
+| Local | MacBook, where the Herdr client runs | |
+| **prometheus** | Main Linux workhorse, and where I drive my other servers from over SSH | 24 cores, 62 GB RAM |
+| **apollo** | Linux box with a GPU | 8 cores, 125 GB RAM, RTX 4060 Ti |
+
+Each server runs its own Herdr server (the `default` session), so agents keep running there when the laptop sleeps or the connection drops. Herdr reconnects by itself, and a dropped connection to one machine doesn't affect the others.
+
+#### Networking and SSH
+
+Both servers are on my [Tailscale](https://tailscale.com) network, so they're reachable from anywhere without opening ports. Herdr uses plain OpenSSH underneath, so everything starts with a normal `~/.ssh/config` entry:
+
+```text title="~/.ssh/config"
+Host prometheus
+    HostName <tailscale IP or MagicDNS name>
+    ForwardAgent yes
+    AddKeysToAgent yes
+```
+
+- `ForwardAgent yes` lets `git push` over SSH and commit signing inside remote panes use the keys on the Mac. Herdr doesn't turn on forwarding by itself. Only enable it for hosts you trust.
+- Herdr's background connections can't answer prompts. If the key has a passphrase, load it with `ssh-add` first, which `AddKeysToAgent` handles after the first use.
+
+Check plain `ssh prometheus` works before involving Herdr.
+
+#### Adding and using machines
+
+```bash
+herdr machine add prometheus   # installs/starts Herdr on the server if needed (asks first)
+herdr machine add apollo
+herdr machine list             # saved profiles and their IDs
+herdr machine status           # non-interactive health check: "reachable" or not
+herdr machine reconnect apollo # redo SSH auth in this terminal if a machine shows "! auth"
+```
+
+- **Switching:** click a machine or workspace in the sidebar, or press `prefix` + `w` and then use the arrow keys to move through workspaces across all machines, with `Enter` to jump.
+- **Scripting:** `herdr --machine apollo agent list` runs API commands against a saved machine without opening the UI.
+- **One-off attach** without saving a profile: `herdr --remote prometheus`.
+
+!!! tip "Agent status in the sidebar"
+    For Herdr to show whether a Claude Code session is working, idle or waiting for input, install its Claude integration **on each machine where Claude Code runs**, not just on the Mac. It adds a small hook to `~/.claude/`:
+
+    ```bash
+    herdr integration install claude
+    herdr integration status        # check it's installed and up to date
+    ```
+
 ## tmux
 
 Config lives at `~/.config/tmux/tmux.conf`. Like most of my config, it lives under `~/.config` rather than as `~/.tmux.conf`, and note there's no dot in front of `tmux.conf`.
