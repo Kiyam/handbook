@@ -184,13 +184,14 @@ A `PreToolUse` hook stops any Bash command containing a recursive `rm` and asks 
 
 ## Statusline
 
-The statusline shows caveman's mode badge plus my plan usage on one line:
+The statusline shows the caveman and ponytail mode badges plus my plan usage on one line:
 
 ```text
-[CAVEMAN]  ·  session 42% · 2h10m · weekly 18% · $3.2 session
+[CAVEMAN] [PONYTAIL]  ·  session 42% · 2h10m · weekly 18% · $3.2 session
 ```
 
 - **Caveman badge:** `[CAVEMAN]`, or `[CAVEMAN:ULTRA]` etc. at levels other than `full`. If `/caveman-stats` has run at least once, the lifetime tokens saved follow the badge. Set `CAVEMAN_STATUSLINE_SAVINGS=0` to hide that.
+- **Ponytail badge:** `[PONYTAIL]` in green, or `[PONYTAIL:LITE]` etc. at other levels. `ULTRA` shows in amber. It comes from `hooks/ponytail-statusline.sh`, which ships with the plugin. It doesn't use the JSON from Claude Code, so the wrapper calls it without piping anything in.
 - **Usage:** how much of the 5-hour session quota is used and when it resets, the weekly quota, and this session's cost. Percentages turn yellow at 75% and red at 90%.
 
 Claude Code only accepts one `statusLine` command, so a small wrapper script builds the line. Where the usage numbers come from depends on the OS:
@@ -201,10 +202,12 @@ Claude Code only accepts one `statusLine` command, so a small wrapper script bui
 
     ```bash title="~/.claude/statusline-combined.sh"
     #!/bin/bash
-    # Combined statusline: caveman badge + usage from Claude Code's own rate_limits JSON.
+    # Combined statusline: caveman + ponytail badges + usage from Claude Code's own rate_limits JSON.
     INPUT=$(cat)
 
     CAVEMAN=$(printf '%s' "$INPUT" | bash "$HOME/.claude/plugins/marketplaces/caveman/src/hooks/caveman-statusline.sh" 2>/dev/null)
+    PONYTAIL=$(bash "$HOME/.claude/plugins/marketplaces/ponytail/hooks/ponytail-statusline.sh" 2>/dev/null)
+    BADGES="$CAVEMAN${CAVEMAN:+${PONYTAIL:+ }}$PONYTAIL"
 
     USAGE=$(printf '%s' "$INPUT" | jq -r '
       def col(p): if p >= 90 then "\u001b[31m" elif p >= 75 then "\u001b[33m" else "\u001b[32m" end;
@@ -216,10 +219,10 @@ Claude Code only accepts one `statusLine` command, so a small wrapper script bui
         (.cost.total_cost_usd // empty | "\u001b[2m$\(. * 100 | round / 100) session\u001b[0m")
       ] | join(" · ")' 2>/dev/null)
 
-    if [ -n "$CAVEMAN" ] && [ -n "$USAGE" ]; then
-      printf '%s  \033[2m·\033[0m  %s' "$CAVEMAN" "$USAGE"
-    elif [ -n "$CAVEMAN" ]; then
-      printf '%s' "$CAVEMAN"
+    if [ -n "$BADGES" ] && [ -n "$USAGE" ]; then
+      printf '%s  \033[2m·\033[0m  %s' "$BADGES" "$USAGE"
+    elif [ -n "$BADGES" ]; then
+      printf '%s' "$BADGES"
     else
       printf '%s' "$USAGE"
     fi
@@ -233,16 +236,18 @@ Claude Code only accepts one `statusLine` command, so a small wrapper script bui
 
     ```bash title="~/.claude/statusline-combined.sh"
     #!/bin/bash
-    # Combined statusline: caveman badge + claude-god usage stats, one line.
+    # Combined statusline: caveman + ponytail badges + claude-god usage stats, one line.
     INPUT=$(cat)
 
     CAVEMAN=$(printf '%s' "$INPUT" | bash "$HOME/.claude/plugins/marketplaces/caveman/src/hooks/caveman-statusline.sh" 2>/dev/null)
+    PONYTAIL=$(bash "$HOME/.claude/plugins/marketplaces/ponytail/hooks/ponytail-statusline.sh" 2>/dev/null)
+    BADGES="$CAVEMAN${CAVEMAN:+${PONYTAIL:+ }}$PONYTAIL"
     USAGE=$(printf '%s' "$INPUT" | "$HOME/.claude-god/statusline.sh" 2>/dev/null)
 
-    if [ -n "$CAVEMAN" ] && [ -n "$USAGE" ]; then
-      printf '%s  \033[2m·\033[0m  %s' "$CAVEMAN" "$USAGE"
-    elif [ -n "$CAVEMAN" ]; then
-      printf '%s' "$CAVEMAN"
+    if [ -n "$BADGES" ] && [ -n "$USAGE" ]; then
+      printf '%s  \033[2m·\033[0m  %s' "$BADGES" "$USAGE"
+    elif [ -n "$BADGES" ]; then
+      printf '%s' "$BADGES"
     else
       printf '%s' "$USAGE"
     fi
@@ -263,4 +268,4 @@ Both versions use the same settings entry. Remember to make the wrapper executab
 ```
 
 !!! note
-    The caveman script path points to the plugin's marketplace checkout. If the plugin moves after an update, the badge just disappears without an error. Check that path first if that happens.
+    The caveman and ponytail script paths point to each plugin's marketplace checkout. If a plugin moves after an update, its badge just disappears without an error. Check that path first if that happens.
