@@ -184,20 +184,54 @@ A `PreToolUse` hook stops any Bash command containing a recursive `rm` and asks 
 
 ## Statusline
 
-The statusline shows two things on one line: caveman's mode badge and my plan usage from Claude God.
+The statusline shows caveman's mode badge plus my plan usage on one line:
 
 ```text
-[CAVEMAN] ⛏ 12.4k  ·  session 42% · 2h10m · weekly 18% · $3.20 today
+[CAVEMAN]  ·  session 42% · 2h10m · weekly 18% · $3.2 session
 ```
 
-- **Caveman badge:** `[CAVEMAN]`, or `[CAVEMAN:ULTRA]` etc. at levels other than `full`, followed by the lifetime tokens saved. The savings figure only updates when `/caveman-stats` runs. Set `CAVEMAN_STATUSLINE_SAVINGS=0` to hide it.
-- **Claude God usage:** reads `~/.claude-god/usage.json`, which the Claude God app exports (turn on JSON export in its Settings). It shows how much of the session quota is used and when it resets, the weekly quota, and today's spend. Percentages turn yellow at 75% and red at 90%, and `(stale Nm)` appears if the file hasn't been updated for more than 2 minutes.
+- **Caveman badge:** `[CAVEMAN]`, or `[CAVEMAN:ULTRA]` etc. at levels other than `full`. If `/caveman-stats` has run at least once, the lifetime tokens saved follow the badge. Set `CAVEMAN_STATUSLINE_SAVINGS=0` to hide that.
+- **Usage:** how much of the 5-hour session quota is used and when it resets, the weekly quota, and this session's cost. Percentages turn yellow at 75% and red at 90%.
 
-Claude Code only accepts one `statusLine` command, so a small wrapper runs both scripts. It sends the same JSON input to each one and joins whatever they print. If only one of them prints anything, that's all you see.
+Claude Code only accepts one `statusLine` command, so a small wrapper script builds the line. Where the usage numbers come from depends on the OS:
 
-=== "~/.claude/statusline-combined.sh"
+=== "Linux"
 
-    ```bash
+    The usage numbers come straight from the JSON that Claude Code sends to the statusline command on stdin (`rate_limits` and `cost`). [`jq`](https://jqlang.org/) formats them, so `jq` is the only extra dependency.
+
+    ```bash title="~/.claude/statusline-combined.sh"
+    #!/bin/bash
+    # Combined statusline: caveman badge + usage from Claude Code's own rate_limits JSON.
+    INPUT=$(cat)
+
+    CAVEMAN=$(printf '%s' "$INPUT" | bash "$HOME/.claude/plugins/marketplaces/caveman/src/hooks/caveman-statusline.sh" 2>/dev/null)
+
+    USAGE=$(printf '%s' "$INPUT" | jq -r '
+      def col(p): if p >= 90 then "\u001b[31m" elif p >= 75 then "\u001b[33m" else "\u001b[32m" end;
+      def eta(t): (t - now | floor) as $s
+        | if $s < 60 then "\($s)s" elif $s < 3600 then "\($s/60|floor)m"
+          elif $s < 86400 then "\($s/3600|floor)h\(($s%3600)/60|floor)m" else "\($s/86400|floor)d" end;
+      [ (.rate_limits.five_hour // empty | col(.used_percentage) + "session \(.used_percentage|round)%\u001b[0m\u001b[2m · \(eta(.resets_at))\u001b[0m"),
+        (.rate_limits.seven_day // empty | col(.used_percentage) + "weekly \(.used_percentage|round)%\u001b[0m"),
+        (.cost.total_cost_usd // empty | "\u001b[2m$\(. * 100 | round / 100) session\u001b[0m")
+      ] | join(" · ")' 2>/dev/null)
+
+    if [ -n "$CAVEMAN" ] && [ -n "$USAGE" ]; then
+      printf '%s  \033[2m·\033[0m  %s' "$CAVEMAN" "$USAGE"
+    elif [ -n "$CAVEMAN" ]; then
+      printf '%s' "$CAVEMAN"
+    else
+      printf '%s' "$USAGE"
+    fi
+    ```
+
+=== "macOS"
+
+    On the Mac I use the **Claude God** app. It puts the same usage figures in the macOS menu bar, so they're visible even when no terminal is open. It also exports them to `~/.claude-god/usage.json` (turn on JSON export in its Settings) and generates `~/.claude-god/statusline.sh` to print them. That script also shows today's spend and adds `(stale Nm)` if the app has stopped updating.
+
+    So the wrapper calls Claude God's script for the usage part instead of using `jq`:
+
+    ```bash title="~/.claude/statusline-combined.sh"
     #!/bin/bash
     # Combined statusline: caveman badge + claude-god usage stats, one line.
     INPUT=$(cat)
@@ -214,18 +248,19 @@ Claude Code only accepts one `statusLine` command, so a small wrapper runs both 
     fi
     ```
 
-=== "~/.claude/settings.json (excerpt)"
+    !!! tip
+        The Linux script works on macOS too (`brew install jq`). Claude God is only needed for the menu bar.
 
-    ```json
-    {
-      "statusLine": {
-        "type": "command",
-        "command": "~/.claude/statusline-combined.sh"
-      }
-    }
-    ```
+Both versions use the same settings entry. Remember to make the wrapper executable with `chmod +x ~/.claude/statusline-combined.sh`.
 
-Make the wrapper executable with `chmod +x ~/.claude/statusline-combined.sh`.
+```json title="~/.claude/settings.json (excerpt)"
+{
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline-combined.sh"
+  }
+}
+```
 
 !!! note
     The caveman script path points to the plugin's marketplace checkout. If the plugin moves after an update, the badge just disappears without an error. Check that path first if that happens.
