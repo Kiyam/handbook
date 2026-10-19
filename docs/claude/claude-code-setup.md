@@ -194,69 +194,37 @@ The statusline shows the caveman and ponytail mode badges plus my plan usage on 
 - **Ponytail badge:** `[PONYTAIL]` in green, or `[PONYTAIL:LITE]` etc. at other levels. `ULTRA` shows in amber. It comes from `hooks/ponytail-statusline.sh`, which ships with the plugin. It doesn't use the JSON from Claude Code, so the wrapper calls it without piping anything in.
 - **Usage:** how much of the 5-hour session quota is used and when it resets, the weekly quota, and this session's cost. Percentages turn yellow at 75% and red at 90%.
 
-Claude Code only accepts one `statusLine` command, so a small wrapper script builds the line. Where the usage numbers come from depends on the OS:
+Claude Code only accepts one `statusLine` command, so a small wrapper script builds the line. It's the same on macOS and Linux. The usage numbers come straight from the JSON that Claude Code sends to the statusline command on stdin (`rate_limits` and `cost`), and [`jq`](https://jqlang.org/) formats them. `jq` is the only extra dependency: it's preinstalled on recent macOS, and on Linux it's `apt install jq` or equivalent.
 
-=== "Linux"
+```bash title="~/.claude/statusline-combined.sh"
+#!/bin/bash
+# Combined statusline: caveman + ponytail badges + usage from Claude Code's own rate_limits JSON.
+INPUT=$(cat)
 
-    The usage numbers come straight from the JSON that Claude Code sends to the statusline command on stdin (`rate_limits` and `cost`). [`jq`](https://jqlang.org/) formats them, so `jq` is the only extra dependency.
+CAVEMAN=$(printf '%s' "$INPUT" | bash "$HOME/.claude/plugins/marketplaces/caveman/src/hooks/caveman-statusline.sh" 2>/dev/null)
+PONYTAIL=$(bash "$HOME/.claude/plugins/marketplaces/ponytail/hooks/ponytail-statusline.sh" 2>/dev/null)
+BADGES="$CAVEMAN${CAVEMAN:+${PONYTAIL:+ }}$PONYTAIL"
 
-    ```bash title="~/.claude/statusline-combined.sh"
-    #!/bin/bash
-    # Combined statusline: caveman + ponytail badges + usage from Claude Code's own rate_limits JSON.
-    INPUT=$(cat)
+USAGE=$(printf '%s' "$INPUT" | jq -r '
+  def col(p): if p >= 90 then "\u001b[31m" elif p >= 75 then "\u001b[33m" else "\u001b[32m" end;
+  def eta(t): (t - now | floor) as $s
+    | if $s < 60 then "\($s)s" elif $s < 3600 then "\($s/60|floor)m"
+      elif $s < 86400 then "\($s/3600|floor)h\(($s%3600)/60|floor)m" else "\($s/86400|floor)d" end;
+  [ (.rate_limits.five_hour // empty | col(.used_percentage) + "session \(.used_percentage|round)%\u001b[0m\u001b[2m · \(eta(.resets_at))\u001b[0m"),
+    (.rate_limits.seven_day // empty | col(.used_percentage) + "weekly \(.used_percentage|round)%\u001b[0m"),
+    (.cost.total_cost_usd // empty | "\u001b[2m$\(. * 100 | round / 100) session\u001b[0m")
+  ] | join(" · ")' 2>/dev/null)
 
-    CAVEMAN=$(printf '%s' "$INPUT" | bash "$HOME/.claude/plugins/marketplaces/caveman/src/hooks/caveman-statusline.sh" 2>/dev/null)
-    PONYTAIL=$(bash "$HOME/.claude/plugins/marketplaces/ponytail/hooks/ponytail-statusline.sh" 2>/dev/null)
-    BADGES="$CAVEMAN${CAVEMAN:+${PONYTAIL:+ }}$PONYTAIL"
+if [ -n "$BADGES" ] && [ -n "$USAGE" ]; then
+  printf '%s  \033[2m·\033[0m  %s' "$BADGES" "$USAGE"
+elif [ -n "$BADGES" ]; then
+  printf '%s' "$BADGES"
+else
+  printf '%s' "$USAGE"
+fi
+```
 
-    USAGE=$(printf '%s' "$INPUT" | jq -r '
-      def col(p): if p >= 90 then "\u001b[31m" elif p >= 75 then "\u001b[33m" else "\u001b[32m" end;
-      def eta(t): (t - now | floor) as $s
-        | if $s < 60 then "\($s)s" elif $s < 3600 then "\($s/60|floor)m"
-          elif $s < 86400 then "\($s/3600|floor)h\(($s%3600)/60|floor)m" else "\($s/86400|floor)d" end;
-      [ (.rate_limits.five_hour // empty | col(.used_percentage) + "session \(.used_percentage|round)%\u001b[0m\u001b[2m · \(eta(.resets_at))\u001b[0m"),
-        (.rate_limits.seven_day // empty | col(.used_percentage) + "weekly \(.used_percentage|round)%\u001b[0m"),
-        (.cost.total_cost_usd // empty | "\u001b[2m$\(. * 100 | round / 100) session\u001b[0m")
-      ] | join(" · ")' 2>/dev/null)
-
-    if [ -n "$BADGES" ] && [ -n "$USAGE" ]; then
-      printf '%s  \033[2m·\033[0m  %s' "$BADGES" "$USAGE"
-    elif [ -n "$BADGES" ]; then
-      printf '%s' "$BADGES"
-    else
-      printf '%s' "$USAGE"
-    fi
-    ```
-
-=== "macOS"
-
-    On the Mac I use the **Claude God** app. It puts the same usage figures in the macOS menu bar, so they're visible even when no terminal is open. It also exports them to `~/.claude-god/usage.json` (turn on JSON export in its Settings) and generates `~/.claude-god/statusline.sh` to print them. That script also shows today's spend and adds `(stale Nm)` if the app has stopped updating.
-
-    So the wrapper calls Claude God's script for the usage part instead of using `jq`:
-
-    ```bash title="~/.claude/statusline-combined.sh"
-    #!/bin/bash
-    # Combined statusline: caveman + ponytail badges + claude-god usage stats, one line.
-    INPUT=$(cat)
-
-    CAVEMAN=$(printf '%s' "$INPUT" | bash "$HOME/.claude/plugins/marketplaces/caveman/src/hooks/caveman-statusline.sh" 2>/dev/null)
-    PONYTAIL=$(bash "$HOME/.claude/plugins/marketplaces/ponytail/hooks/ponytail-statusline.sh" 2>/dev/null)
-    BADGES="$CAVEMAN${CAVEMAN:+${PONYTAIL:+ }}$PONYTAIL"
-    USAGE=$(printf '%s' "$INPUT" | "$HOME/.claude-god/statusline.sh" 2>/dev/null)
-
-    if [ -n "$BADGES" ] && [ -n "$USAGE" ]; then
-      printf '%s  \033[2m·\033[0m  %s' "$BADGES" "$USAGE"
-    elif [ -n "$BADGES" ]; then
-      printf '%s' "$BADGES"
-    else
-      printf '%s' "$USAGE"
-    fi
-    ```
-
-    !!! tip
-        The Linux script works on macOS too (`brew install jq`). Claude God is only needed for the menu bar.
-
-Both versions use the same settings entry. Remember to make the wrapper executable with `chmod +x ~/.claude/statusline-combined.sh`.
+Make the wrapper executable with `chmod +x ~/.claude/statusline-combined.sh`, then point Claude Code at it:
 
 ```json title="~/.claude/settings.json (excerpt)"
 {
