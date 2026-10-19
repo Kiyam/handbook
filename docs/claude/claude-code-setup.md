@@ -181,3 +181,51 @@ A `PreToolUse` hook stops any Bash command containing a recursive `rm` and asks 
       }
     }
     ```
+
+## Statusline
+
+The statusline shows two things on one line: caveman's mode badge and my plan usage from Claude God.
+
+```text
+[CAVEMAN] ⛏ 12.4k  ·  session 42% · 2h10m · weekly 18% · $3.20 today
+```
+
+- **Caveman badge:** `[CAVEMAN]`, or `[CAVEMAN:ULTRA]` etc. at levels other than `full`, followed by the lifetime tokens saved. The savings figure only updates when `/caveman-stats` runs. Set `CAVEMAN_STATUSLINE_SAVINGS=0` to hide it.
+- **Claude God usage:** reads `~/.claude-god/usage.json`, which the Claude God app exports (turn on JSON export in its Settings). It shows how much of the session quota is used and when it resets, the weekly quota, and today's spend. Percentages turn yellow at 75% and red at 90%, and `(stale Nm)` appears if the file hasn't been updated for more than 2 minutes.
+
+Claude Code only accepts one `statusLine` command, so a small wrapper runs both scripts. It sends the same JSON input to each one and joins whatever they print. If only one of them prints anything, that's all you see.
+
+=== "~/.claude/statusline-combined.sh"
+
+    ```bash
+    #!/bin/bash
+    # Combined statusline: caveman badge + claude-god usage stats, one line.
+    INPUT=$(cat)
+
+    CAVEMAN=$(printf '%s' "$INPUT" | bash "$HOME/.claude/plugins/marketplaces/caveman/src/hooks/caveman-statusline.sh" 2>/dev/null)
+    USAGE=$(printf '%s' "$INPUT" | "$HOME/.claude-god/statusline.sh" 2>/dev/null)
+
+    if [ -n "$CAVEMAN" ] && [ -n "$USAGE" ]; then
+      printf '%s  \033[2m·\033[0m  %s' "$CAVEMAN" "$USAGE"
+    elif [ -n "$CAVEMAN" ]; then
+      printf '%s' "$CAVEMAN"
+    else
+      printf '%s' "$USAGE"
+    fi
+    ```
+
+=== "~/.claude/settings.json (excerpt)"
+
+    ```json
+    {
+      "statusLine": {
+        "type": "command",
+        "command": "~/.claude/statusline-combined.sh"
+      }
+    }
+    ```
+
+Make the wrapper executable with `chmod +x ~/.claude/statusline-combined.sh`.
+
+!!! note
+    The caveman script path points to the plugin's marketplace checkout. If the plugin moves after an update, the badge just disappears without an error. Check that path first if that happens.
