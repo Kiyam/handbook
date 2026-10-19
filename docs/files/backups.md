@@ -1,6 +1,6 @@
 # Backups
 
-Several layers, each covering a different failure. Everything ends up on a NAS at a **second site**, reached over [Tailscale](index.md#tailscale), so a fire, flood or burglary at home doesn't take the backups with it.
+Backups are done with two tools: **[restic](#restic-and-backrest)** for files, and **[Proxmox Backup Server](#proxmox-backups)** for whole VMs. File sync is *not* part of this. [Syncthing](sync.md) puts files on devices, which is a different job.
 
 !!! warning "Three things that are not backups"
     - **Sync** (Syncthing, Dropbox). Delete or encrypt a file on one device and the deletion syncs everywhere within seconds.
@@ -9,28 +9,45 @@ Several layers, each covering a different failure. Everything ends up on a NAS a
 
     A backup is a separate, versioned copy you can go back in time with, ideally somewhere else. The usual rule is **3-2-1**: three copies, on two different kinds of storage, one of them offsite.
 
-## Overview
+## The goal: two NAS boxes, two sites
+
+Every device is backed up to **two separate NAS boxes at two different physical locations**, joined by [Tailscale](../homelab/index.md#tailscale). Either site can burn down, flood or be burgled, and a full, versioned copy of everything still exists at the other.
 
 ```mermaid
 flowchart LR
-    devices["Laptop / phones"] -- Syncthing --> nas["NAS<br/>(main site)"]
-    docker["Docker host"] -- "nightly DB dumps" --> docker
-    nas -- "restic via Backrest" --> offsite
-    docker -- "restic via Backrest" --> offsite
-    pve["Proxmox VMs"] -- "vzdump" --> pbs
-    subgraph remote["Second site"]
-        offsite["Offsite NAS<br/>mergerfs + SnapRAID"]
-        pbs["Proxmox Backup Server"]
+    subgraph sources["Everything that gets backed up"]
+        laptops["Laptops"]
+        servers["Servers<br/>(Docker host, workstation)"]
+        nasdata["NAS data<br/>(photos, files, library)"]
+        vms["Proxmox VMs"]
     end
+    subgraph siteA["Site A"]
+        nasA["Backup NAS A<br/>restic repos"]
+        pbsA["PBS A"]
+    end
+    subgraph siteB["Site B"]
+        nasB["Backup NAS B<br/>restic repos"]
+        pbsB["PBS B"]
+    end
+    laptops & servers & nasdata -- restic --> nasA
+    laptops & servers & nasdata -- restic --> nasB
+    vms -- vzdump --> pbsA
+    pbsA -. "PBS sync job" .-> pbsB
 ```
+
+- **Files go to both sites directly.** Each machine has one restic repository per backup NAS, with the same paths and schedule but run at different times. You could instead back up to one repo and `restic copy` it to the second, but two independent repos mean one corrupted repo can't spread to the other.
+- **VMs go to one PBS, which syncs to the other.** PBS has built-in [sync jobs](https://pbs.proxmox.com/docs/managing-remotes.html) that pull a datastore from a remote PBS, so the hypervisor only uploads each backup once.
+- **Each site's NAS stays independent.** It isn't a mirror of the other: a mistake replicated instantly to both copies is the failure this setup exists to avoid.
+
+!!! note "Where I am now"
+    The offsite half is done. The servers, the NAS's data and every VM back up nightly to the NAS and PBS at the second site. The next step is the matching set of repos at the main site, so a restore doesn't need a slow pull over the internet.
 
 | Layer | Tool | Protects against |
 |---|---|---|
-| Devices → NAS | [Syncthing](#syncthing) | A lost or broken laptop/phone. Files are already on the NAS. |
-| Database dumps | [cron/systemd + `pg_dump`](#database-dumps) | A corrupted or half-written database in a file-level backup. |
-| Files → offsite | [restic + Backrest](#restic-and-backrest) | Deletion, ransomware, losing the whole main site. Versioned back two years. |
-| VMs → offsite | [Proxmox Backup Server](#proxmox-backups) | A VM's OS disk dying or a bad upgrade. Restore the whole VM in minutes. |
-| Offsite disks | [mergerfs + SnapRAID](#snapraid-and-mergerfs) | One disk in the backup NAS dying. |
+| Database dumps | [systemd timer + `pg_dumpall`](#database-dumps) | A corrupted or half-written database inside a file-level backup. |
+| Files → both NAS boxes | [restic + Backrest](#restic-and-backrest) | Deletion, ransomware, losing a whole site. Versioned back two years. |
+| VMs → PBS | [Proxmox Backup Server](#proxmox-backups) | A VM's OS disk dying, or a bad upgrade. Restore the whole VM in minutes. |
+| Backup NAS disks | [mergerfs + SnapRAID](#snapraid-and-mergerfs) | One disk in a backup NAS dying. |
 
 ### The night
 
@@ -40,24 +57,10 @@ Jobs are staggered so they don't compete for disks and bandwidth:
 |---|---|
 | 00:00 | Database dumps on the Docker host |
 | 01:30 | Proxmox backs up all VMs to PBS |
-| 02:30 | Backrest on the NAS → offsite |
-| 03:30 | Backrest on the Docker host → offsite |
-| 05:00 (local) | SnapRAID diff / sync / scrub on the offsite NAS |
+| 02:30 | Backrest on the NAS → backup NAS |
+| 03:30 | Backrest on the Docker host → backup NAS |
+| 05:00 (local) | SnapRAID diff / sync / scrub on the backup NAS |
 | weekly | restic `prune` and `check` on each repo |
-
-## Syncthing
-
-[Syncthing](https://syncthing.net) keeps folders in sync between devices, peer to peer, with no cloud in between. It runs in Docker on the NAS and as a background service on each laptop:
-
-```bash
-brew install syncthing
-brew services start syncthing   # web UI on http://127.0.0.1:8384
-```
-
-The NAS is the always-on device every laptop and phone syncs with, so it's the one place that has everything. The synced folders are then shared over SMB to other machines (Immich and Photoview read the photo folders from there), and the backup jobs pick them up from the NAS.
-
-!!! tip "Turn on file versioning"
-    In each folder's settings, enable **File Versioning** on the NAS side ("Staggered" is a good default). A file deleted or overwritten on a laptop is then moved into `.stversions/` on the NAS rather than removed. This is a short-term undo, not a substitute for the backups below.
 
 ## Database dumps
 
@@ -116,13 +119,13 @@ Some details:
 
 [restic](https://restic.net) makes encrypted, deduplicated snapshots. Each run only uploads what changed, but every snapshot is a complete point-in-time copy you can browse or restore from. [Backrest](https://github.com/garethgeorge/backrest) is a web UI and scheduler on top of restic: plans, retention, a browsable snapshot list, and notifications when something fails.
 
-Both the NAS and the Docker host run Backrest in Docker and back up to the offsite NAS over **SFTP via Tailscale**. Nothing has to be exposed to the internet, and the offsite NAS just needs an SSH account.
+Both the NAS and the Docker host run Backrest in Docker and back up over **SFTP via Tailscale**. Nothing has to be exposed to the internet, and each backup NAS just needs an SSH account. In Backrest, a second site is one more repo and one more plan pointing at it.
 
 | | NAS | Docker host |
 |---|---|---|
-| Backs up | Synced files, photos (including Immich's library), Lightroom, the shared library | The whole compose repo and service data, DB dumps, books/audiobooks/music |
+| Backs up | Personal files, photos (including Immich's library), Lightroom, the shared library | The whole compose repo and service data, DB dumps, books/audiobooks/music |
 | Skips | — | Game libraries and other things that can be downloaded again |
-| Repository | `sftp:<user>@<offsite-nas>:/srv/<pool>/<host>-backup` | same, one repo per host |
+| Repository | `sftp:<user>@<backup-nas>:/srv/<pool>/<host>-backup` | same, one repo per host |
 | Schedule | 02:30 daily | 03:30 daily |
 | Keep | 14 daily, 8 weekly, 12 monthly, 2 yearly | same |
 | Maintenance | `prune` weekly (repack when >10 % unused), `check` weekly | same |
@@ -153,7 +156,7 @@ What to leave out: anything that can be downloaded again (media from the \*arr s
 Restoring from the command line, without Backrest:
 
 ```bash
-export RESTIC_REPOSITORY=sftp:<user>@<offsite-nas>:/srv/<pool>/<host>-backup
+export RESTIC_REPOSITORY=sftp:<user>@<backup-nas>:/srv/<pool>/<host>-backup
 restic snapshots                                    # list
 restic ls latest /backup_data/paperless             # browse
 restic restore latest --target /tmp/restore --include /backup_data/paperless
@@ -180,7 +183,7 @@ The data disks passed through to the VMs (the NAS's storage, the Docker host's m
 
 ## SnapRAID and mergerfs
 
-The offsite NAS runs [OpenMediaVault](https://www.openmediavault.org) with four large disks: three for data and one for parity.
+The backup NAS runs [OpenMediaVault](https://www.openmediavault.org) with four large disks: three for data and one for parity.
 
 - **[mergerfs](https://github.com/trapexit/mergerfs)** pools the three data disks into one folder (`/srv/mergerfs/<pool>`). Each file lives whole on one ordinary ext4 disk, so any disk can be pulled out and read on another machine.
 - **[SnapRAID](https://www.snapraid.it)** computes parity across them on a schedule. If one disk dies, its contents can be rebuilt from the others plus parity.

@@ -26,11 +26,16 @@ nav = [
     { "Containers with Apptainer" = "hpc/containers.md" },
     { "Working on clusters" = "hpc/working-on-clusters.md" },
   ] },
+  { "Files" = [
+    "files/index.md",
+    { "Backups" = "files/backups.md" },
+    { "File sync" = "files/sync.md" },
+    { "Samba" = "files/samba.md" },
+  ] },
   { "Homelab" = [
     "homelab/index.md",
     { "Docker stack" = "homelab/docker.md" },
     { "Services & monitoring" = "homelab/services.md" },
-    { "Backups" = "homelab/backups.md" },
   ] },
 ]
 

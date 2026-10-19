@@ -32,4 +32,4 @@ The Docker host keeps each service's config and databases on its own disk, and m
 
 ## Backups
 
-Syncthing, nightly database dumps, restic/Backrest to a second site, Proxmox Backup Server and SnapRAID all have their own page: [Backups](backups.md).
+Backups have their own section: see [Files → Backups](../files/backups.md) for restic/Backrest, Proxmox Backup Server, database dumps and SnapRAID.

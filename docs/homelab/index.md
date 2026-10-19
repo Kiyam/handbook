@@ -4,7 +4,7 @@ Notes on my homelab setup. It's spread over two sites plus a travel router, all 
 
 - [Docker stack](docker.md): about a hundred self-hosted services on one host, behind Traefik and CrowdSec.
 - [Services & monitoring](services.md): what runs and how I know it's up.
-- [Backups](backups.md): Syncthing, restic/Backrest, Proxmox Backup Server and SnapRAID, with copies at a second site.
+- Backups, file sync and SMB shares are in their own section: [Files](../files/index.md).
 
 ## Overview
 
