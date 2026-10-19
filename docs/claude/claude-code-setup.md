@@ -132,6 +132,8 @@ Skills are folders with a `SKILL.md` that Claude loads when a task matches its d
 | `arxiv-rag` | Reads a `.bib` file, downloads the LaTeX source of every entry with an arXiv ID, and builds a corpus ready for RAG. Python scripts sit next to the `SKILL.md`. |
 | `jax-review` | Reviews and writes idiomatic JAX: dtypes, PRNG keys, `jit`/`vmap`/`scan`, NaN gradients, recompiles, GPU memory. |
 
+They live in my [dotfiles](../terminal/terminal-setup.md#chezmoi), so `chezmoi update` puts them on every machine where I run Claude Code. Skill scripts declare their Python dependencies inline ([PEP 723](https://peps.python.org/pep-0723/)) and run with `uv run`, so nothing has to be installed globally on each machine.
+
 **Installed with the [skills CLI](https://github.com/vercel-labs/skills)**, which puts them in `~/.agents/skills/` and symlinks them into each agent's skills folder, so other coding agents can use them too:
 
 ```bash
