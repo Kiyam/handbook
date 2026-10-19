@@ -1,6 +1,6 @@
 # Homelab
 
-Notes on my homelab setup. It's spread over three locations, all joined by Tailscale.
+Notes on my homelab setup. Almost everything is at one main site, on two Proxmox hosts behind an OPNsense router. A travel router at a second location joins it over Tailscale.
 
 - [Proxmox](proxmox.md): the hypervisor, VMs vs LXCs, GPU and disk passthrough.
 - [Network](network.md): OPNsense, AdGuard Home DNS synced across sites, UniFi, and a GL.iNet travel router.
@@ -14,36 +14,39 @@ Notes on my homelab setup. It's spread over three locations, all joined by Tails
 ```mermaid
 flowchart LR
     subgraph main["Main site"]
-        subgraph pve["Proxmox host"]
+        router["OPNsense router<br/>firewall, DNS, Tailscale exit node"]
+        subgraph pve1["Proxmox host 1: services"]
             docker["Docker host VM<br/>GPU, ~100 containers"]
-            work["Workstation VM<br/>remote desktop"]
+            work["Workstation VM"]
             nas["NAS VM<br/>OpenMediaVault"]
             unifi["UniFi controller LXC"]
         end
-    end
-    subgraph second["Second site"]
-        router["OPNsense router<br/>(Tailscale exit node)"]
-        bnas["Backup NAS"]
-        pbs["Proxmox Backup Server"]
+        subgraph pve2["Proxmox host 2: backups"]
+            bnas["Backup NAS VM<br/>OpenMediaVault"]
+            pbs["Proxmox Backup Server LXC"]
+            dns2["AdGuard + Unbound LXCs"]
+        end
+        router --- pve1
+        router --- pve2
     end
     subgraph studio["Studio"]
         travel["GL.iNet travel router"]
     end
     laptop["Laptop / phone"]
     docker -- "SMB shares" --> nas
-    main <-. tailnet .-> second
+    pve1 -- "restic / vzdump" --> pve2
     main <-. tailnet .-> studio
     laptop <-. tailnet .-> main
 ```
 
 | Machine | Runs | Role |
 |---|---|---|
-| Hypervisor | [Proxmox VE](https://www.proxmox.com) | Hosts the VMs and LXCs at the main site. See [Proxmox](proxmox.md). |
+| Router | [OPNsense](https://opnsense.org) | Firewall, router and DNS for the main site, and a Tailscale exit node. See [Network](network.md). |
+| Proxmox host 1 | [Proxmox VE](https://www.proxmox.com) | The services: the Docker host, the workstation, the NAS and the UniFi controller. See [Proxmox](proxmox.md). |
 | Docker host | Ubuntu Server VM with an NVIDIA GPU passed through | Runs the whole [Docker stack](docker.md). The GPU is used for Immich ML, Frigate, Whisper and Ollama. |
 | Workstation | Ubuntu VM | Remote desktop (xrdp) and SSH for heavier work, such as running Claude Code over [Herdr](../terminal/tmux-herdr.md#remote-machines). |
 | NAS | [OpenMediaVault](https://www.openmediavault.org) VM | The primary copy of photos, files and the family library. Shared over [SMB](../files/samba.md) and synced to devices with [Syncthing](../files/sync.md). |
-| Router | [OPNsense](https://opnsense.org) | Firewall, router and DNS at the second site, and a Tailscale exit node. See [Network](network.md). |
-| Backup NAS + PBS | OpenMediaVault, Proxmox Backup Server | Off-site [backup](../files/backups.md) target. |
+| Proxmox host 2 | Proxmox VE | Separate hardware just for [backups](../files/backups.md): a backup NAS VM and Proxmox Backup Server. It also runs a second AdGuard Home and Unbound, so DNS survives the router being down. |
 | Travel router | [GL.iNet](https://www.gl-inet.com) | Router at the studio, also on the tailnet. |
 
 !!! tip "Why VMs under Proxmox"
@@ -66,5 +69,5 @@ Things worth setting up:
 
 - **Tags for servers.** Servers are registered with a [tag](https://tailscale.com/kb/1068/tags) rather than my user account, so their node keys don't expire with my login, and ACLs can target all servers at once.
 - **Exit node.** The OPNsense router advertises itself as an exit node. On a phone or laptop, `tailscale set --exit-node=<router>` sends all traffic through it.
-- **Routers on the tailnet.** With the routers themselves on the tailnet, both sites stay reachable, and a router can [advertise its LAN as a subnet route](https://tailscale.com/kb/1019/subnets) for devices that can't run Tailscale.
+- **Routers on the tailnet.** With the routers themselves on the tailnet, both the main site and the studio stay reachable, and a router can [advertise its LAN as a subnet route](https://tailscale.com/kb/1019/subnets) for devices that can't run Tailscale.
 - **The reverse proxy over Tailscale.** Traefik on the Docker host also routes a few services that live on *other* machines, reaching them by their Tailscale address. See [Docker stack](docker.md#routes-to-things-outside-docker).

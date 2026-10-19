@@ -1,6 +1,11 @@
 # Proxmox
 
-Everything at the main site runs on one [Proxmox VE](https://www.proxmox.com/en/products/proxmox-virtual-environment/overview) host: the NAS, the Docker host and the workstation are VMs, and small services are LXC containers. Backups of all of them are covered in [Files → Backups](../files/backups.md#proxmox-backups).
+Everything runs on two [Proxmox VE](https://www.proxmox.com/en/products/proxmox-virtual-environment/overview) hosts:
+
+- **Services host.** The NAS, the Docker host and the workstation are VMs, and small services such as the UniFi controller are LXC containers.
+- **Backup host.** Separate hardware with a backup NAS VM, Proxmox Backup Server and the second DNS server (AdGuard Home + Unbound) as LXCs.
+
+Keeping backups on their own machine means a failed disk controller, a bad Proxmox upgrade or a mistake on the services host can't take the backups down with it. Backups themselves are covered in [Files → Backups](../files/backups.md#proxmox-backups).
 
 ## VM or LXC?
 
@@ -10,7 +15,7 @@ Everything at the main site runs on one [Proxmox VE](https://www.proxmox.com/en/
 | Overhead | A few GB of RAM, full OS | Tiny: boots in seconds, ~100 MB of RAM |
 | Hardware | Full PCIe passthrough (GPU, disk controllers) | Bind mounts and device nodes only |
 | Docker inside | Just works | Possible (`nesting=1`) but fiddly |
-| Use it for | Anything with passthrough hardware, Docker hosts, other OSes (Home Assistant OS) | Single small services: the UniFi controller, a local PBS |
+| Use it for | Anything with passthrough hardware, Docker hosts, other OSes (Home Assistant OS) | Single small services: the UniFi controller, PBS, AdGuard Home, Unbound |
 
 My rule: **one service and no special hardware → LXC; everything else → VM.**
 

@@ -9,7 +9,7 @@ Backups are done with two tools: **[restic](#restic-and-backrest)** for files, a
 
     A backup is a separate, versioned copy you can go back in time with, ideally somewhere else. The usual rule is **3-2-1**: three copies, on two different kinds of storage, one of them offsite.
 
-## The goal: two NAS boxes, two sites
+## The goal: two backup NAS boxes, two sites
 
 Every device is backed up to **two separate NAS boxes at two different physical locations**, joined by [Tailscale](../homelab/index.md#tailscale). Either site can burn down, flood or be burgled, and a full, versioned copy of everything still exists at the other.
 
@@ -116,7 +116,7 @@ Some details:
 
 [restic](https://restic.net) makes encrypted, deduplicated snapshots. Each run only uploads what changed, but every snapshot is a complete point-in-time copy you can browse or restore from. [Backrest](https://github.com/garethgeorge/backrest) is a web UI and scheduler on top of restic: plans, retention, a browsable snapshot list, and notifications when something fails.
 
-Both the NAS and the Docker host run Backrest in Docker and back up over **SFTP via Tailscale**. Nothing has to be exposed to the internet, and each backup NAS just needs an SSH account. In Backrest, a second site is one more repo and one more plan pointing at it.
+Both the NAS and the Docker host run Backrest in Docker and back up to the backup NAS over **SFTP via Tailscale**. Nothing has to be exposed to the internet, and each backup NAS just needs an SSH account. Adding a second site in Backrest is one more repo and one more plan pointing at it.
 
 | | NAS | Docker host |
 |---|---|---|
@@ -148,7 +148,7 @@ The source directories are mounted into the Backrest container read-only:
 !!! danger "Save the repository password somewhere else"
     restic encrypts everything with the repository password. Without it the backup is unreadable, including by you. Keep it in your password manager, and **not only** on the machine being backed up.
 
-What to leave out: anything that can be downloaded again (media from the \*arr stack, game libraries, Docker images, caches). Backing up tens of TB of replaceable media offsite costs more than it's worth. The irreplaceable things, such as photos, documents, config and databases, are a few TB.
+What to leave out: anything that can be downloaded again (media from the \*arr stack, game libraries, Docker images, caches). Backing up tens of TB of replaceable media costs more than it's worth. The irreplaceable things, such as photos, documents, config and databases, are a few TB.
 
 Restoring from the command line, without Backrest:
 
@@ -162,7 +162,7 @@ restic mount /mnt/restic                            # or browse every snapshot a
 
 ## Proxmox backups
 
-The hypervisor backs up every guest, both VMs and LXC containers, nightly to a [Proxmox Backup Server](https://www.proxmox.com/en/products/proxmox-backup-server/overview) (PBS) at the second site, over Tailscale. PBS deduplicates across guests and nights, so keeping many restore points costs little space.
+The hypervisor backs up every guest, both VMs and LXC containers, nightly to a [Proxmox Backup Server](https://www.proxmox.com/en/products/proxmox-backup-server/overview) (PBS), which runs as an LXC on the separate backup Proxmox host. PBS deduplicates across guests and nights, so keeping many restore points costs little space.
 
 ```text title="Datacenter → Backup job"
 schedule    01:30
@@ -207,7 +207,7 @@ Why SnapRAID rather than RAID or ZFS here:
 The catch is that parity is only as fresh as the last `sync`. A disk that dies mid-afternoon loses that day's new files. That suits a backup target or a media library (written once, read many times), not a busy database.
 
 !!! note
-    The main site's own media pool is ten btrfs disks under mergerfs with **no** parity. It's all replaceable, so a dead disk means re-downloading, not losing anything. Decide per dataset whether it's worth protecting.
+    The Docker host's own media pool is ten btrfs disks under mergerfs with **no** parity. It's all replaceable, so a dead disk means re-downloading, not losing anything. Decide per dataset whether it's worth protecting.
 
 ## Testing restores
 

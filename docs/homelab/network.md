@@ -1,9 +1,8 @@
 # Network
 
-Three locations, all on one [Tailscale](index.md#tailscale) tailnet:
+Two locations, on one [Tailscale](index.md#tailscale) tailnet:
 
-- **Main site:** the [Proxmox](proxmox.md) host with the NAS, the Docker host and the workstation, plus the UniFi controller.
-- **Second site:** an OPNsense router, the backup NAS and Proxmox Backup Server.
+- **Main site:** an OPNsense router in front of two [Proxmox](proxmox.md) hosts, one for services and one for backups.
 - **Studio:** a GL.iNet travel router.
 
 ## OPNsense
@@ -27,7 +26,7 @@ Three locations, all on one [Tailscale](index.md#tailscale) tailnet:
 - The usual setup moves OPNsense's own resolver (Unbound) to another port and makes it AdGuard's upstream. Alternatively, AdGuard can use encrypted upstreams (DNS-over-HTTPS) directly.
 - **Local names** are added as DNS rewrites, such as `*.<internal>.<domain>` → the Docker host. Internal services then resolve to a LAN IP and never leave the network. See [internal-only names](docker.md#security-layers).
 
-Each site has its own AdGuard instance, so DNS keeps working if the tunnel between sites is down. [adguardhome-sync](https://github.com/bakito/adguardhome-sync) runs in Docker and copies the settings from one origin instance to the replicas every two hours, so blocklists, rewrites and client settings only need editing in one place:
+There are two AdGuard instances: the main one on the router, and a replica in an LXC on the backup Proxmox host, with its own Unbound LXC as upstream. With both handed out as DNS servers, DNS keeps working while the router reboots or the main instance is down. [adguardhome-sync](https://github.com/bakito/adguardhome-sync) runs in Docker and copies the settings from one origin instance to the replicas every two hours, so blocklists, rewrites and client settings only need editing in one place:
 
 ```yaml title="compose excerpt"
   adguardhome-sync:
@@ -42,7 +41,7 @@ Each site has its own AdGuard instance, so DNS keeps working if the tunnel betwe
       REPLICA1_PASSWORD: $ADGUARD_PASSWORD
       CRON: "0 */2 * * *"
       RUN_ON_START: "true"
-      FEATURES_DNS_SERVER_CONFIG: "false"   # each site keeps its own upstreams/listen settings
+      FEATURES_DNS_SERVER_CONFIG: "false"   # each instance keeps its own upstreams/listen settings
     restart: unless-stopped
 ```
 
@@ -51,7 +50,7 @@ Each site has its own AdGuard instance, so DNS keeps working if the tunnel betwe
 
 ## Wi-Fi: UniFi
 
-The UniFi access points are managed by the UniFi Network controller, which runs in a small **LXC container** on the Proxmox host (2 cores, 2 GB RAM) rather than on dedicated hardware. The access points keep working if the controller is off. It's only needed for changing settings and for stats.
+The UniFi access points are managed by the UniFi Network controller, which runs in a small **LXC container** on the services Proxmox host (2 cores, 2 GB RAM) rather than on dedicated hardware. The access points keep working if the controller is off. It's only needed for changing settings and for stats.
 
 ## Travel router: GL.iNet
 
