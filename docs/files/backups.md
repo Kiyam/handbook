@@ -120,7 +120,7 @@ Both the NAS and the Docker host run Backrest in Docker and back up to the backu
 
 | | NAS | Docker host |
 |---|---|---|
-| Backs up | Personal files, photos (including Immich's library), Lightroom, the shared library | The whole compose repo and service data, DB dumps, books/audiobooks/music |
+| Backs up | Personal files, photos (including Immich's library), Lightroom, the shared library | The whole compose repo and service data, DB dumps |
 | Skips | — | Game libraries and other things that can be downloaded again |
 | Repository | `sftp:<user>@<backup-nas>:/srv/<pool>/<host>-backup` | same, one repo per host |
 | Schedule | 02:30 daily | 03:30 daily |
@@ -138,7 +138,6 @@ The source directories are mounted into the Backrest container read-only:
       - $TEMPDIR/backrest/cache:/cache      # restic cache, makes runs much faster
       - $DOCKERDIR/backrest/.ssh:/.ssh:ro   # key for the SFTP repository
       - $USERDIR/docker:/backup_data:ro
-      - $MEDIADIR:/backup_media:ro
     environment:
       - BACKREST_DATA=/data
       - BACKREST_CONFIG=/config/config.json
@@ -148,7 +147,7 @@ The source directories are mounted into the Backrest container read-only:
 !!! danger "Save the repository password somewhere else"
     restic encrypts everything with the repository password. Without it the backup is unreadable, including by you. Keep it in your password manager, and **not only** on the machine being backed up.
 
-What to leave out: anything that can be downloaded again (media from the \*arr stack, game libraries, Docker images, caches). Backing up tens of TB of replaceable media costs more than it's worth. The irreplaceable things, such as photos, documents, config and databases, are a few TB.
+What to leave out: anything that can be downloaded again (game libraries, Docker images, caches). Backing up tens of TB of replaceable data costs more than it's worth. The irreplaceable things, such as photos, documents, config and databases, are a few TB.
 
 Restoring from the command line, without Backrest:
 
@@ -173,7 +172,7 @@ compress    zstd
 storage     pbs          # the remote PBS datastore
 ```
 
-The data disks passed through to the VMs (the NAS's storage, the Docker host's media pool) are each marked **`backup=0`** in the VM's hardware settings, so the job only takes the OS disks. Mount points on LXC containers have the same `backup` flag. Those are what you need to get a VM booting again after a failure or a bad upgrade. The data on the other disks is covered by restic instead, file by file.
+The data disks passed through to the VMs (the NAS's storage, the Docker host's data disks) are each marked **`backup=0`** in the VM's hardware settings, so the job only takes the OS disks. Mount points on LXC containers have the same `backup` flag. Those are what you need to get a VM booting again after a failure or a bad upgrade. The data on the other disks is covered by restic instead, file by file.
 
 !!! tip
     Add PBS as storage with an [API token](https://pbs.proxmox.com/docs/user-management.html#api-tokens) that only has backup permissions on one datastore, rather than the root password.
@@ -204,10 +203,7 @@ Why SnapRAID rather than RAID or ZFS here:
 - **Only the disk being read spins up.** Good for a box that mostly sits idle.
 - **No pool to lose.** Lose more disks than you have parity and you lose only *those* disks' files, not everything.
 
-The catch is that parity is only as fresh as the last `sync`. A disk that dies mid-afternoon loses that day's new files. That suits a backup target or a media library (written once, read many times), not a busy database.
-
-!!! note
-    The Docker host's own media pool is ten btrfs disks under mergerfs with **no** parity. It's all replaceable, so a dead disk means re-downloading, not losing anything. Decide per dataset whether it's worth protecting.
+The catch is that parity is only as fresh as the last `sync`. A disk that dies mid-afternoon loses that day's new files. That suits a backup target or an archive (written once, read many times), not a busy database.
 
 ## Testing restores
 

@@ -23,7 +23,7 @@ For LXCs, the [Proxmox VE Helper-Scripts](https://community-scripts.github.io/Pr
 
 ## GPU passthrough
 
-The Docker host VM gets the whole NVIDIA GPU, which is used by Immich, Frigate, Plex/Jellyfin transcoding, Whisper and Ollama. The steps on an AMD host:
+The Docker host VM gets the whole NVIDIA GPU, which is used by Immich, Frigate, Whisper and Ollama. The steps on an AMD host:
 
 1. **Turn on IOMMU** (also called AMD-Vi or VT-d) in the BIOS, then on the kernel command line. Proxmox with LVM boots via GRUB: edit `/etc/default/grub`, run `update-grub` and reboot.
 
@@ -75,9 +75,6 @@ The Docker host VM gets the whole NVIDIA GPU, which is used by Immich, Frigate, 
     Turn memory ballooning off (`balloon: 0`). A VM with a passed-through device has to keep all its RAM pinned anyway.
 
 5. **Inside the VM**, install the normal NVIDIA driver and the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) so Docker containers can use the GPU.
-
-!!! tip "NVENC session limit"
-    Consumer NVIDIA cards cap the number of simultaneous hardware video encodes. With Plex, Jellyfin and Frigate all encoding, you hit it quickly. [keylase/nvidia-patch](https://github.com/keylase/nvidia-patch) removes the limit. Re-run it after every driver update.
 
 ## Passing disks through
 

@@ -9,8 +9,8 @@ docker/
 ├── docker-compose.yml       # networks, secrets, core services, and the include list
 ├── .env                     # shared variables: DOCKERDIR, DOMAINNAME, PUID/PGID, TZ ...
 ├── compose/
-│   ├── media-management.yml # one file per group of related services
-│   ├── media-management.env
+│   ├── photos.yml           # one file per group of related services
+│   ├── photos.env
 │   ├── monitoring.yml
 │   ├── monitoring.env
 │   └── ...
@@ -27,8 +27,8 @@ The root file pulls in every group with Compose's [`include`](https://docs.docke
 include:
   - path: $DOCKERDIR/compose/monitoring.yml
     env_file: $DOCKERDIR/compose/monitoring.env
-  - path: $DOCKERDIR/compose/media-management.yml
-    env_file: $DOCKERDIR/compose/media-management.env
+  - path: $DOCKERDIR/compose/photos.yml
+    env_file: $DOCKERDIR/compose/photos.env
   # ...
 ```
 
