@@ -29,7 +29,8 @@ nav = [
   { "Homelab" = [
     "homelab/index.md",
     { "Docker stack" = "homelab/docker.md" },
-    { "Services, monitoring & backups" = "homelab/services.md" },
+    { "Services & monitoring" = "homelab/services.md" },
+    { "Backups" = "homelab/backups.md" },
   ] },
 ]
 

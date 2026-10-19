@@ -1,4 +1,4 @@
-# Services, monitoring & backups
+# Services & monitoring
 
 ## What runs
 
@@ -32,9 +32,4 @@ The Docker host keeps each service's config and databases on its own disk, and m
 
 ## Backups
 
-- **Databases are dumped nightly** to `db_backups/` as dated `.sql.gz` files. A dump is consistent even while the app runs, which a copy of the live database directory isn't.
-- **[Backrest](https://github.com/garethgeorge/backrest)** (a web UI for [restic](https://restic.net)) then snapshots the whole compose repo, the service data and the dumps, deduplicated and encrypted, on a schedule with retention rules.
-- **Snapshot the VM in Proxmox** before a big upgrade, so a bad update is a rollback rather than a rebuild.
-
-!!! warning "Test restores"
-    A backup you have never restored from is a hope, not a backup. Every so often, restore one service's data into a scratch directory and check it opens.
+Syncthing, nightly database dumps, restic/Backrest to a second site, Proxmox Backup Server and SnapRAID all have their own page: [Backups](backups.md).

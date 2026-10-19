@@ -3,7 +3,8 @@
 Notes on my homelab setup. It's spread over two sites plus a travel router, all joined by Tailscale.
 
 - [Docker stack](docker.md): about a hundred self-hosted services on one host, behind Traefik and CrowdSec.
-- [Services, monitoring & backups](services.md): what runs, how I know it's up, and how it's backed up.
+- [Services & monitoring](services.md): what runs and how I know it's up.
+- [Backups](backups.md): Syncthing, restic/Backrest, Proxmox Backup Server and SnapRAID, with copies at a second site.
 
 ## Overview
 
