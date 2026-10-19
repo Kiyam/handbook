@@ -8,7 +8,6 @@ Grouped roughly by the compose file they live in. Not exhaustive, just the ones 
 |---|---|
 | Dashboards | [Homepage](https://gethomepage.dev), [Glance](https://github.com/glanceapp/glance) |
 | Photos | [Immich](https://immich.app), with its machine-learning container on the GPU (CUDA) for face and object search |
-| Media | Plex and [Jellyfin](https://jellyfin.org), [Audiobookshelf](https://www.audiobookshelf.org), the \*arr stack ([Sonarr](https://sonarr.tv), [Radarr](https://radarr.video), [Prowlarr](https://prowlarr.com), [Bazarr](https://www.bazarr.media)), [Tautulli](https://tautulli.com) |
 | Documents | [Paperless-ngx](https://docs.paperless-ngx.com) (OCR and tagging for scanned documents), [Stirling PDF](https://www.stirlingpdf.com) |
 | AI | [Ollama](https://ollama.com) + [Open WebUI](https://openwebui.com), [faster-whisper](https://github.com/SYSTRAN/faster-whisper) for speech-to-text, [ComfyUI](https://github.com/comfyanonymous/ComfyUI) |
 | Home | [Frigate](https://frigate.video) (camera NVR with object detection on the GPU), [ntfy](https://ntfy.sh) (push notifications from scripts and services) |
@@ -21,7 +20,7 @@ Grouped roughly by the compose file they live in. Not exhaustive, just the ones 
 
 ## Storage
 
-The Docker host keeps each service's config and databases on its own disk, and mounts bulk data from the NAS over SMB (`cifs` in `/etc/fstab`): photos for Immich, media, and the shared family library. Several local disks are pooled into one mount with [mergerfs](https://github.com/trapexit/mergerfs), so services see one big directory without caring which disk a file is on.
+The Docker host keeps each service's config and databases on its own disk, and mounts bulk data from the NAS over SMB (`cifs` in `/etc/fstab`): photos for Immich and the shared family library. Several local disks are pooled into one mount with [mergerfs](https://github.com/trapexit/mergerfs), so services see one big directory without caring which disk a file is on.
 
 ## Monitoring
 
