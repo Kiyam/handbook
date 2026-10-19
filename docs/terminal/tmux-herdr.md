@@ -63,13 +63,21 @@ herdr machine reconnect <computer_name>  # redo SSH auth in this terminal if a m
 - **Scripting:** `herdr --machine <computer_name> agent list` runs API commands against a saved machine without opening the UI.
 - **One-off attach** without saving a profile: `herdr --remote <computer_name>`.
 
-!!! tip "Agent status in the sidebar"
-    For Herdr to show whether a Claude Code session is working, idle or waiting for input, install its Claude integration **on each machine where Claude Code runs**, not just on the Mac. It adds a small hook to `~/.claude/`:
+!!! tip "Claude Code integration"
+    Install Herdr's Claude integration **on each machine where Claude Code runs**, not just on the Mac. It adds a small `SessionStart` hook to `~/.claude/` that tells Herdr which Claude session is running in which pane, so panes map to the right conversation:
 
     ```bash
     herdr integration install claude
     herdr integration status        # check it's installed and up to date
     ```
+
+### Updating
+
+```bash
+herdr update --handoff
+```
+
+`--handoff` hands the open panes over to the new server, so running agents and shells keep going through the upgrade. Afterwards, run `herdr` to reattach, and re-run `herdr integration install claude` if it says the integrations are out of date. Do this on each remote machine too, since they don't update with the Mac.
 
 ## tmux
 

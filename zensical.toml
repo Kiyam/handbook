@@ -25,7 +25,11 @@ nav = [
     { "Containers with Apptainer" = "hpc/containers.md" },
     { "Working on clusters" = "hpc/working-on-clusters.md" },
   ] },
-  { "Homelab" = ["homelab/index.md"] },
+  { "Homelab" = [
+    "homelab/index.md",
+    { "Docker stack" = "homelab/docker.md" },
+    { "Services, monitoring & backups" = "homelab/services.md" },
+  ] },
 ]
 
 [project.theme]
@@ -73,6 +77,8 @@ pymdownx.highlight.line_spans = "__span"
 pymdownx.highlight.pygments_lang_class = true
 pymdownx.inlinehilite = {}
 pymdownx.keys = {}
-pymdownx.superfences = {}
+pymdownx.superfences.custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]
 pymdownx.tabbed.alternate_style = true
 pymdownx.tabbed.combine_header_slug = true

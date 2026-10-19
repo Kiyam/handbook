@@ -120,6 +120,42 @@ From the official `claude-plugins-official` marketplace, which is available by d
 
 Plus [obsidian-cli](https://github.com/pablo-mano/Obsidian-CLI-skill) for reading and writing my Obsidian vault.
 
+## Skills
+
+Skills are folders with a `SKILL.md` that Claude loads when a task matches its description. They live in `~/.claude/skills/`, one folder per skill.
+
+**My own**, written for research work:
+
+| Skill | What it does |
+|---|---|
+| `paper-summariser` | Turns an arXiv paper or PDF into a structured note: method, assumptions, contribution, relevance. It appraises the paper rather than just paraphrasing it. |
+| `arxiv-rag` | Reads a `.bib` file, downloads the LaTeX source of every entry with an arXiv ID, and builds a corpus ready for RAG. Python scripts sit next to the `SKILL.md`. |
+| `jax-review` | Reviews and writes idiomatic JAX: dtypes, PRNG keys, `jit`/`vmap`/`scan`, NaN gradients, recompiles, GPU memory. |
+
+**Installed with the [skills CLI](https://github.com/vercel-labs/skills)**, which puts them in `~/.agents/skills/` and symlinks them into each agent's skills folder, so other coding agents can use them too:
+
+```bash
+npx skills add vercel-labs/skills      # find-skills: search for and install more skills
+npx skills add ogulcancelik/herdr      # herdr: lets Claude drive Herdr panes and agents
+```
+
+!!! tip
+    The description in a skill's frontmatter decides when it gets used. Make it list the actual phrases you'd type ("my gradient is NaN", "TL;DR of this PDF"), not just a summary of the topic.
+
+## A `CLAUDE.md` per project
+
+Projects I work on with Claude have a `CLAUDE.md` at their root. Claude reads it at the start of each session. Keep it to what Claude can't work out from the code:
+
+- the commands to build, run and deploy;
+- the layout and *why* it's that way;
+- the gotchas that already cost you time once.
+
+For example, the `CLAUDE.md` for my [homelab Docker stack](../homelab/docker.md) says to always restart services from the repo root and never with `-f compose/<file>.yml`, because the included files can't see the root networks. The `claude-md-management` plugin above helps keep these files current.
+
+## Herdr integration
+
+On every machine where I run Claude inside [Herdr](../terminal/tmux-herdr.md#herdr), `herdr integration install claude` adds a `SessionStart` hook, so Herdr knows which Claude session lives in which pane. See [Remote machines](../terminal/tmux-herdr.md#remote-machines).
+
 ## Safety hook: confirm recursive `rm`
 
 A `PreToolUse` hook stops any Bash command containing a recursive `rm` and asks me on the terminal before it runs. Claude can't approve it on my behalf.
