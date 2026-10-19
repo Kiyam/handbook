@@ -1,9 +1,8 @@
 # tmux & Herdr
 
-Terminal multiplexers keep sessions alive after you disconnect and split one terminal into windows and panes. I use both:
+Terminal multiplexers keep sessions alive after you disconnect and split one terminal into windows and panes.
 
-- **tmux** is the classic, and it's on every server.
-- **Herdr** is the new kid in town, built for running several AI coding agents side by side.
+I used to use **tmux**, but have since switched to **Herdr**. It's much better at managing several AI coding agents side by side, and at working across remote servers from one window. The tmux setup is still [further down](#tmux) for posterity, but I don't use it anymore.
 
 ## Herdr
 
@@ -80,6 +79,12 @@ herdr machine reconnect apollo # redo SSH auth in this terminal if a machine sho
     ```
 
 ## tmux
+
+!!! info "No longer used"
+    This is my old tmux setup, kept for posterity. I've switched to [Herdr](#herdr).
+
+!!! warning "Older computing clusters"
+    TPM and many of its plugins need a fairly recent tmux. On some older computing clusters, the system tmux is far too old, and installing a new enough version yourself (without root, with old compilers and libraries) can be a real challenge.
 
 Config lives at `~/.config/tmux/tmux.conf`. Like most of my config, it lives under `~/.config` rather than as `~/.tmux.conf`, and note there's no dot in front of `tmux.conf`.
 

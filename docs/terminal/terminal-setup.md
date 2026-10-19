@@ -243,7 +243,7 @@ Everything uses [Catppuccin](https://catppuccin.com) **Macchiato**, so the termi
 | Ghostty | `theme = catppuccin-macchiato.conf` |
 | File colours (`eza`, completions) | `export LS_COLORS="$(vivid generate catppuccin-macchiato)"` |
 | fzf | The `FZF_DEFAULT_OPTS` colours above |
-| tmux | The [catppuccin/tmux](https://github.com/catppuccin/tmux) plugin with `@catppuccin_flavor "macchiato"` |
+| tmux ([old setup](tmux-herdr.md#tmux)) | The [catppuccin/tmux](https://github.com/catppuccin/tmux) plugin with `@catppuccin_flavor "macchiato"` |
 | Neovim | `colorscheme = "catppuccin-macchiato"` |
 | btop, Herdr | Their `TTY` / `terminal` themes, which inherit Ghostty's palette |
 
