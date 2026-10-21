@@ -21,6 +21,8 @@ nav = [
   { "Claude" = [
     "claude/index.md",
     { "Claude Code setup" = "claude/claude-code-setup.md" },
+    { "Plugins" = "claude/plugins.md" },
+    { "Skills" = "claude/skills.md" },
   ] },
   { "HPC" = [
     "hpc/index.md",

@@ -14,7 +14,9 @@ Shell tools, editor and dotfiles.
 
 ## [Claude](claude/index.md)
 
-- [Claude Code setup](claude/claude-code-setup.md) — caveman, ponytail, skills, hooks and the statusline
+- [Claude Code setup](claude/claude-code-setup.md) — `CLAUDE.md` files, hooks and the statusline
+- [Plugins](claude/plugins.md) — caveman, ponytail and friends
+- [Skills](claude/skills.md) — research skills, the skills CLI, Hunk's review skill
 
 ## [HPC](hpc/index.md)
 

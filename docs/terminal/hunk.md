@@ -80,7 +80,7 @@ This is the main reason to use Hunk. Hunk runs a small local daemon, and a runni
 - leave inline review notes, with a summary and rationale, right above the code they're about;
 - highlight the exact characters it's talking about.
 
-Setup:
+Setup (more on the skills in [Claude → Skills](../claude/skills.md#hunk)):
 
 ```bash
 ln -s ~/.hunk/skills/hunk-review ~/.claude/skills/hunk-review   # make the skill visible to Claude Code

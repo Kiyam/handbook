@@ -1,152 +1,6 @@
 # Claude Code setup
 
-How my [Claude Code](https://docs.anthropic.com/en/docs/claude-code) is set up. The two plugins that change day-to-day behaviour the most are **caveman** and **ponytail**. They complement each other:
-
-- **Caveman** shrinks what the agent *says*.
-- **Ponytail** shrinks what the agent *builds*.
-
-Caveman doesn't touch code, and ponytail doesn't touch prose, so they don't overlap. Together you get terse explanations of minimal code.
-
-## Caveman
-
-Repo: [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman)
-
-Makes Claude drop filler, pleasantries and hedging and reply in short fragments ("Bug in auth middleware. Token expiry check use `<` not `<=`. Fix:"). Code blocks, commands, error messages and commit messages stay exact and are written normally. The README reports about 65% fewer output tokens on average across its benchmarks. Thinking tokens aren't affected, so the main win is replies that are faster to read.
-
-### Install
-
-Run each command as a separate prompt inside Claude Code:
-
-```text
-/plugin marketplace add JuliusBrussee/caveman
-```
-
-```text
-/plugin install caveman@caveman
-```
-
-Or from a shell:
-
-```bash
-claude plugin marketplace add JuliusBrussee/caveman && claude plugin install caveman@caveman
-```
-
-On Claude Code it turns itself on at the start of every session through a hook, so you don't need to type `/caveman`.
-
-### Usage
-
-| Command | What it does |
-|---|---|
-| `/caveman [lite\|full\|ultra\|wenyan]` | Set the compression level (default `full`). The level lasts until the session ends. |
-| `normal mode` / `stop caveman` | Turn it off for the session. |
-| `/caveman-commit` | Conventional Commit message with a subject of 50 characters or fewer. |
-| `/caveman-review` | Code review as one line per issue: `L42: 🔴 bug: user null. Add guard.` |
-| `/caveman-compress <file>` | Rewrite a memory file (e.g. `CLAUDE.md`) in caveman style to save input tokens every session. Keeps a `.original.md` backup. |
-| `/caveman-stats` | Real token usage and savings for the session. |
-| `/caveman-help` | Quick reference. |
-
-It also ships `cavecrew-*` subagents (investigator / builder / reviewer) whose output comes back compressed, so the main context lasts longer.
-
-!!! tip
-    Caveman switches itself back to normal prose for security warnings, confirmations of irreversible actions, and step-by-step instructions where fragments could be misread. If something needs a careful explanation, ask it to clarify and it will.
-
-## Ponytail
-
-Repo: [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail)
-
-Puts a "lazy senior developer" inside the agent: someone who replaces fifty lines with one. Ask for a date picker and instead of installing a library and writing a wrapper component, you get:
-
-```html
-<!-- ponytail: browser has one -->
-<input type="date">
-```
-
-### The ladder
-
-Once the agent has read and understood the code involved, it stops at the first rung that works:
-
-```text
-1. Does this need to exist?   → no: skip it (YAGNI)
-2. Already in this codebase?  → reuse it, don't rewrite
-3. Stdlib does it?            → use it
-4. Native platform feature?   → use it
-5. Installed dependency?      → use it
-6. One line?                  → one line
-7. Only then: the minimum that works
-```
-
-It never cuts input validation, error handling that prevents data loss, security, or accessibility. Deliberate shortcuts get a `ponytail:` comment that names their limit and how to upgrade later. That way they can be tracked instead of forgotten.
-
-### Install
-
-Two separate prompts inside Claude Code:
-
-```text
-/plugin marketplace add DietrichGebert/ponytail
-```
-
-```text
-/plugin install ponytail@ponytail
-```
-
-It needs `node` on the PATH of non-interactive shells for its hooks. Without it, the skills still work, but the always-on activation stays off.
-
-### Usage
-
-| Command | What it does |
-|---|---|
-| `/ponytail [lite\|full\|ultra\|off]` | Set the intensity, or turn it off. With no argument it reports the current level. |
-| `/ponytail-review` | Review the current diff for over-engineering and return a list of things to delete. |
-| `/ponytail-audit` | The same check across the whole repo. |
-| `/ponytail-debt` | Collect every `ponytail:` shortcut into a ledger. |
-| `/ponytail-gain` | Benchmark scoreboard. |
-| `/ponytail-help` | Quick reference. |
-
-??? note "Changing the default level"
-    Set `PONYTAIL_DEFAULT_MODE` (`lite`/`full`/`ultra`/`off`), or add a `defaultMode` field to `~/.config/ponytail/config.json`. The default is `full`. By default the rules are also injected into subagents. To limit which agent types get them, set `PONYTAIL_SUBAGENT_MATCHER` to a regex.
-
-## Other plugins
-
-From the official `claude-plugins-official` marketplace, which is available by default:
-
-| Plugin | Why |
-|---|---|
-| `superpowers` | Process skills: brainstorming, writing plans, TDD, systematic debugging, checking work before calling it done. |
-| `code-review` | `/code-review` on a PR or the local diff. |
-| `github` | GitHub MCP server (issues, PRs, code search). |
-| `claude-md-management` | Audit and update `CLAUDE.md` files. |
-| `skill-creator` | Build and test new skills. |
-| `frontend-design` | Design guidance for UI work. |
-
-Plus [obsidian-cli](https://github.com/pablo-mano/Obsidian-CLI-skill) for reading and writing my Obsidian vault.
-
-## Skills
-
-Skills are folders with a `SKILL.md` that Claude loads when a task matches its description. They live in `~/.claude/skills/`, one folder per skill.
-
-**My own**, written for research work:
-
-| Skill | What it does |
-|---|---|
-| `paper-summariser` | Turns an arXiv paper or PDF into a structured note: method, assumptions, contribution, relevance. It appraises the paper rather than just paraphrasing it. |
-| `arxiv-rag` | Reads a `.bib` file, downloads the LaTeX source of every entry with an arXiv ID, and builds a corpus ready for RAG. Python scripts sit next to the `SKILL.md`. |
-| `jax-review` | Reviews and writes idiomatic JAX: dtypes, PRNG keys, `jit`/`vmap`/`scan`, NaN gradients, recompiles, GPU memory. |
-
-They live in my [dotfiles](../terminal/terminal-setup.md#chezmoi), so `chezmoi update` puts them on every machine where I run Claude Code. Skill scripts declare their Python dependencies inline ([PEP 723](https://peps.python.org/pep-0723/)) and run with `uv run`, so nothing has to be installed globally on each machine.
-
-**Installed with the [skills CLI](https://github.com/vercel-labs/skills)**, which puts them in `~/.agents/skills/` and symlinks them into each agent's skills folder, so other coding agents can use them too:
-
-```bash
-npx skills add vercel-labs/skills      # find-skills: search for and install more skills
-npx skills add ogulcancelik/herdr      # herdr: lets Claude drive Herdr panes and agents
-```
-
-!!! tip
-    The description in a skill's frontmatter decides when it gets used. Make it list the actual phrases you'd type ("my gradient is NaN", "TL;DR of this PDF"), not just a summary of the topic.
-
-## Reviewing changes with Hunk
-
-The `hunk-review` skill, which ships with [Hunk](../terminal/hunk.md), and a `/hunk` command let Claude walk me through its own changes inside a live Hunk window: it moves the view, leaves inline notes and highlights lines. See [Reviewing Claude's changes](../terminal/hunk.md#reviewing-claudes-changes).
+How the rest of my [Claude Code](https://docs.anthropic.com/en/docs/claude-code) is set up. The [plugins](plugins.md) (caveman, ponytail and others) and [skills](skills.md) have their own pages.
 
 ## A `CLAUDE.md` per project
 
@@ -156,7 +10,7 @@ Projects I work on with Claude have a `CLAUDE.md` at their root. Claude reads it
 - the layout and *why* it's that way;
 - the gotchas that already cost you time once.
 
-For example, the `CLAUDE.md` for my [homelab Docker stack](../homelab/docker.md) says to always restart services from the repo root and never with `-f compose/<file>.yml`, because the included files can't see the root networks. The `claude-md-management` plugin above helps keep these files current.
+For example, the `CLAUDE.md` for my [homelab Docker stack](../homelab/docker.md) says to always restart services from the repo root and never with `-f compose/<file>.yml`, because the included files can't see the root networks. The `claude-md-management` [plugin](plugins.md#other-plugins) helps keep these files current.
 
 ## Herdr integration
 
@@ -226,7 +80,7 @@ A `PreToolUse` hook stops any Bash command containing a recursive `rm` and asks 
 
 ## Statusline
 
-The statusline shows the caveman and ponytail mode badges plus my plan usage on one line:
+The statusline shows the [caveman and ponytail](plugins.md) mode badges plus my plan usage on one line:
 
 <pre class="terminal-preview"><span class="c172">[CAVEMAN]</span> <span class="c108">[PONYTAIL]</span>  <span class="dim">·</span>  <span class="green">session 42%</span><span class="dim"> · 2h10m</span> · <span class="green">weekly 18%</span> · <span class="dim">$3.2 session</span></pre>
 
