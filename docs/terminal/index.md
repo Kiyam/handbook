@@ -6,3 +6,4 @@ Making the shell nicer to live in.
 - [Neovim](neovim.md) — LazyVim plus a few overrides
 - [macOS extras](macos.md) — AeroSpace tiling, LinearMouse, Boring Notch, Mole
 - [tmux & Herdr](tmux-herdr.md) — Herdr with remote machines, plus my old tmux setup
+- [Hunk](hunk.md) — terminal diff viewer for reviewing Claude's changes

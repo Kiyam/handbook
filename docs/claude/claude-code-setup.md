@@ -144,6 +144,10 @@ npx skills add ogulcancelik/herdr      # herdr: lets Claude drive Herdr panes an
 !!! tip
     The description in a skill's frontmatter decides when it gets used. Make it list the actual phrases you'd type ("my gradient is NaN", "TL;DR of this PDF"), not just a summary of the topic.
 
+## Reviewing changes with Hunk
+
+The `hunk-review` skill, which ships with [Hunk](../terminal/hunk.md), and a `/hunk` command let Claude walk me through its own changes inside a live Hunk window: it moves the view, leaves inline notes and highlights lines. See [Reviewing Claude's changes](../terminal/hunk.md#reviewing-claudes-changes).
+
 ## A `CLAUDE.md` per project
 
 Projects I work on with Claude have a `CLAUDE.md` at their root. Claude reads it at the start of each session. Keep it to what Claude can't work out from the code:

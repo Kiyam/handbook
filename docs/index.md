@@ -10,6 +10,7 @@ Shell tools, editor and dotfiles.
 - [Neovim](terminal/neovim.md) — what Vim/Neovim is, how to quit, and my LazyVim setup
 - [macOS extras](terminal/macos.md) — AeroSpace tiling, LinearMouse, Boring Notch, Mole
 - [tmux & Herdr](terminal/tmux-herdr.md) — Herdr with remote machines, plus my old tmux setup
+- [Hunk](terminal/hunk.md) — terminal diff viewer for reviewing Claude's changes
 
 ## [Claude](claude/index.md)
 
