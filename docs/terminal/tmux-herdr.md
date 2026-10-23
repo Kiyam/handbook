@@ -14,7 +14,7 @@ Herdr describes itself as an "agent multiplexer that lives in your terminal": a 
 brew install herdr
 ```
 
-My config just tones the UI down and makes it use the terminal's colours, so it inherits Ghostty's Catppuccin palette:
+My config tones the UI down, uses the terminal's colours (so it inherits Ghostty's Catppuccin palette), and binds keys for three plugins:
 
 ```toml title="~/.config/herdr/config.toml"
 onboarding = false
@@ -26,7 +26,79 @@ show_agent_labels_on_pane_borders = false
 [theme]
 name = "terminal"
 auto_switch = false
+
+[keys]
+close_pane = ""          # unbind the default, closing goes through the confirm plugin
+
+[[keys.command]]
+key = "prefix+x"
+type = "plugin_action"
+command = "kiyam.close-pane.confirm"
+description = "close pane (confirm)"
+
+# vim-herdr-navigation: Ctrl+h/j/k/l across herdr panes and nvim splits
+[[keys.command]]
+key = "ctrl+h"
+type = "plugin_action"
+command = "vim-herdr-navigation.left"
+# ... and the same for ctrl+j / ctrl+k / ctrl+l
+
+# herdr-hunk-diff: review agent diffs and send inline comments back
+[[keys.command]]
+key = "prefix+shift+h"
+type = "plugin_action"
+command = "jhochenbaum.hunkdiff.review"
+# prefix+shift+s send-review, prefix+shift+c review:commit, prefix+shift+a review:staged
 ```
+
+The whole file, plugins included, is in my [chezmoi](terminal-setup.md#chezmoi) dotfiles and goes to every machine I run Herdr on.
+
+### Plugins
+
+| Plugin | What it does | Keys |
+|---|---|---|
+| [herdr-hunk-diff](https://github.com/jhochenbaum/herdr-hunk-diff) | Opens a [Hunk](hunk.md) review of the focused agent's worktree in a pane next to it. Notes you leave in Hunk are sent straight back to that agent as a prompt. | `prefix` `H` review, `S` send notes, `C` last commit, `A` staged |
+| [vim-herdr-navigation](https://github.com/paulbkim-dev/vim-herdr-navigation) | `Ctrl+h/j/k/l` moves between Neovim splits and Herdr panes as if they were one grid. | `Ctrl+h/j/k/l` |
+| `kiyam.close-pane` (my own) | `prefix x` opens a small popup showing the pane's title, agent, folder and workspace, and only closes it on `y`. No more killing a running agent by accident. | `prefix x` |
+
+Third-party plugins run code on every machine, so I read each one first and **pin it to the commit I reviewed**. A chezmoi `run_onchange` script installs them, and it reruns whenever a pinned ref changes:
+
+```bash title="run_onchange_after_herdr-install-plugins.sh"
+#!/bin/sh
+# Install audited herdr plugins pinned to reviewed commits; reruns when a ref changes.
+PATH="$HOME/.local/bin:/opt/homebrew/bin:$PATH"
+command -v herdr >/dev/null || exit 0
+herdr plugin install -y --ref <reviewed-sha> jhochenbaum/herdr-hunk-diff
+herdr plugin install -y --ref <reviewed-sha> paulbkim-dev/vim-herdr-navigation
+```
+
+My own plugin is just a folder in `~/.config/herdr/close-pane/` with a manifest (`herdr-plugin.toml`) and a shell script, registered with `herdr plugin link ~/.config/herdr/close-pane`:
+
+```toml title="~/.config/herdr/close-pane/herdr-plugin.toml"
+id = "kiyam.close-pane"
+name = "Close pane"
+version = "0.1.0"
+min_herdr_version = "0.9.5"
+platforms = ["linux", "macos"]
+
+[[actions]]
+id = "confirm"
+title = "Close pane (confirm)"
+command = ["sh", "-c", "exec \"$HERDR_BIN_PATH\" plugin pane open --plugin kiyam.close-pane --entrypoint confirm >/dev/null"]
+
+[[panes]]
+id = "confirm"
+title = "Close pane"
+placement = "popup"
+width = 64
+height = 12
+command = ["sh", "confirm.sh"]
+```
+
+`confirm.sh` reads the focused pane from `$HERDR_PLUGIN_CONTEXT_JSON`, prints the details, waits for one key and runs `herdr pane close <id>` on `y`. `herdr plugin list` shows what's installed and where each one came from.
+
+!!! tip
+    herdr-hunk-diff bundles its own copy of Hunk. I point it at the system one with `bin = "~/.hunk/bin/hunk"` in `~/.config/herdr/plugins/config/jhochenbaum.hunkdiff/config.toml`, so there's only one Hunk version to keep updated.
 
 ### Remote machines
 
@@ -64,7 +136,7 @@ herdr machine reconnect <computer_name>  # redo SSH auth in this terminal if a m
 - **One-off attach** without saving a profile: `herdr --remote <computer_name>`.
 
 !!! tip "Claude Code integration"
-    Install Herdr's Claude integration **on each machine where Claude Code runs**, not just on the Mac. It adds a small `SessionStart` hook to `~/.claude/` that tells Herdr which Claude session is running in which pane, so panes map to the right conversation:
+    Install Herdr's Claude integration **on each machine where Claude Code runs**, not just on the Mac. It adds a small `SessionStart` hook script to `~/.claude/hooks/` that tells Herdr which Claude session is running in which pane, so panes map to the right conversation. My chezmoi-managed `settings.json` only adds the hook entry on machines where that script exists (see [Claude Code setup](../claude/claude-code-setup.md#herdr-integration)):
 
     ```bash
     herdr integration install claude

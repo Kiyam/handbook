@@ -1,6 +1,85 @@
 # Claude Code setup
 
-How the rest of my [Claude Code](https://docs.anthropic.com/en/docs/claude-code) is set up. The [plugins](plugins.md) (caveman, ponytail and others) and [skills](skills.md) have their own pages.
+How the rest of my [Claude Code](https://docs.anthropic.com/en/docs/claude-code) is set up. [Plugins](plugins.md), [skills](skills.md) and the [research wiki](research.md) have their own pages.
+
+## One config, three machines
+
+I run Claude Code on the Mac and on two servers, the servers reached through [Herdr](../terminal/tmux-herdr.md#remote-machines). Everything under `~/.claude/` that I care about is in my [chezmoi](../terminal/terminal-setup.md#chezmoi) dotfiles, so all three behave the same:
+
+| File | What it holds |
+|---|---|
+| `~/.claude/settings.json` | Model, hooks, enabled plugins, statusline, skill overrides, permission mode. It's a chezmoi **template**, so paths use each machine's home directory. |
+| `~/.claude/CLAUDE.md` | My global instructions (see [Shared memory](#shared-memory-across-machines)). |
+| `~/.claude/hooks/`, `statusline-combined.sh` | The [rm hook](#safety-hook-confirm-recursive-rm) and the [statusline](#statusline). |
+| `~/.claude/skills/`, `commands/` | My [skills](skills.md) and slash commands. |
+
+`.chezmoiignore` keeps all of this on exactly those three machines. Clusters and other servers where I don't run Claude get none of it:
+
+```text title=".chezmoiignore (excerpt)"
+{{- if not (has .chezmoi.hostname (list "<mac>" "<server-1>" "<server-2>")) }}
+.claude/settings.json
+.claude/statusline-combined.sh
+.claude/hooks
+{{- end }}
+```
+
+Plugins listed in `settings.json` also need installing. A `run_onchange` script does that, and reruns whenever its plugin list changes:
+
+```bash title="run_onchange_after_claude-install-plugins.sh"
+#!/bin/sh
+PATH="$HOME/.local/bin:/opt/homebrew/bin:$PATH"
+command -v claude >/dev/null || exit 0
+for p in claude-md-management pyright-lsp session-report; do
+  claude plugin install "$p@claude-plugins-official" >/dev/null
+done
+```
+
+Other settings worth knowing about:
+
+- `"permissions": {"defaultMode": "auto"}` starts every session in auto mode. A classifier checks each action instead of asking me about every command. Recursive `rm` still always asks, because of the [hook](#safety-hook-confirm-recursive-rm).
+- `"skillOverrides"` turns off skills I don't want Claude to pick automatically, such as the bundled Office/PDF skills and a couple of my older ones (see [Skills](skills.md)).
+- `"theme": "dark-ansi"` uses the terminal's own ANSI colours, like everything else.
+
+## Shared memory across machines
+
+Claude Code's auto-memory is per project and per machine, so something learned on the Mac (a host's quirks, a rule about the homelab) is unknown on a server. I keep facts that should hold everywhere in a separate **private git repo**, cloned at `~/.claude/shared-memory`, with one Markdown file per fact and an `index.md`.
+
+A `SessionStart` hook pulls the repo and prints the index, so every session on every machine starts with it in context:
+
+```json title="~/.claude/settings.json (excerpt)"
+{
+  "hooks": {
+    "SessionStart": [{
+      "matcher": "^(startup|resume|clear|compact|fork)$",
+      "hooks": [{
+        "type": "command",
+        "command": "m=\"$HOME/.claude/shared-memory\"; GIT_SSH_COMMAND='ssh -o ConnectTimeout=3 -o BatchMode=yes' git -C \"$m\" pull -q --ff-only >/dev/null 2>&1; [ -f \"$m/index.md\" ] && { echo \"Shared memory index ($m):\"; cat \"$m/index.md\"; }; true",
+        "timeout": 8
+      }]
+    }]
+  }
+}
+```
+
+- **The pull can't hang a session.** `ConnectTimeout=3` and `BatchMode=yes` mean an unreachable git server just skips the pull, and the trailing `true` means the hook never fails.
+- **Only the index is loaded.** Claude reads individual files when one looks relevant.
+
+The global `~/.claude/CLAUDE.md` tells Claude how to *write* to it:
+
+```markdown title="~/.claude/CLAUDE.md"
+# Shared memory
+
+Facts that hold on every machine live in the private repo `~/.claude/shared-memory`,
+same file format as auto-memory. A SessionStart hook pulls it and prints its `index.md`,
+so the index is already in context; read individual files on demand.
+
+Save a memory there instead of per-project memory when it applies across machines or
+projects. Run `git -C ~/.claude/shared-memory pull --ff-only` first, add the file and
+its index line, then commit and push. If the push is rejected, `pull --rebase` and
+push again. If the repo is missing, clone it from <private git URL>.
+```
+
+The repo itself is private: it holds hostnames and details about my network, which is exactly why it isn't in the public dotfiles.
 
 ## A `CLAUDE.md` per project
 
@@ -14,44 +93,40 @@ For example, the `CLAUDE.md` for my [homelab Docker stack](../homelab/docker.md)
 
 ## Herdr integration
 
-On every machine where I run Claude inside [Herdr](../terminal/tmux-herdr.md#herdr), `herdr integration install claude` adds a `SessionStart` hook, so Herdr knows which Claude session lives in which pane. See [Remote machines](../terminal/tmux-herdr.md#remote-machines).
+On every machine where I run Claude inside [Herdr](../terminal/tmux-herdr.md#herdr), `herdr integration install claude` adds a `SessionStart` hook script, so Herdr knows which Claude session lives in which pane. See [Remote machines](../terminal/tmux-herdr.md#remote-machines).
+
+The hook entry in `settings.json` is added by the chezmoi template **only if the script exists**, so a machine without Herdr doesn't get an error at every session start:
+
+```text title="private_settings.json.tmpl (excerpt)"
+{{ if stat (joinPath .chezmoi.homeDir ".claude/hooks/herdr-agent-state.sh") }}
+  ,{"type":"command","command":"bash '{{ .chezmoi.homeDir }}/.claude/hooks/herdr-agent-state.sh' session","timeout":10}
+{{ end }}
+```
 
 ## Safety hook: confirm recursive `rm`
 
-A `PreToolUse` hook stops any Bash command containing a recursive `rm` and asks me on the terminal before it runs. Claude can't approve it on my behalf.
+A `PreToolUse` hook catches any Bash command containing a recursive `rm` and makes Claude Code ask me before it runs, **even in auto mode**. Claude can't approve it on my behalf.
+
+The hook doesn't prompt by itself. It replies with `permissionDecision: "ask"`, so Claude Code shows its normal permission prompt. An earlier version read the answer from `/dev/tty`, which fought with Claude Code's own terminal UI. The pattern catches `rm` anywhere in the command line: after `sudo`, `xargs`, `find -exec`, `then`/`do`, inside quotes, or as `/bin/rm`.
 
 === "~/.claude/hooks/rm_confirmation.sh"
 
     ```bash
     #!/usr/bin/env bash
     # Hook: intercept rm -r / rm -rf commands and require explicit user confirmation.
-    # Receives tool input JSON on stdin; exits 0 to allow, exits 2 to block.
+    # Receives the PreToolUse JSON on stdin; the command is at .tool_input.command.
+    # Replies with permissionDecision "ask", so Claude Code shows its own prompt
+    # (also in auto mode) instead of this script reading /dev/tty under the TUI.
 
     set -euo pipefail
 
     input=$(cat)
-    command=$(echo "$input" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('command',''))" 2>/dev/null || true)
+    command=$(echo "$input" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('command',''))" 2>/dev/null || true)
 
-    # Match rm with recursive flags anywhere in the command
-    if echo "$command" | grep -qE '(^|[;&|`(]|\bsudo\b)\s*rm\s+[^;]*-[a-zA-Z]*r'; then
-      # Write prompt directly to the terminal, bypassing stdout (which Claude reads)
-      exec 3>/dev/tty
-      echo "" >&3
-      echo "⚠️  Claude wants to run a recursive rm command:" >&3
-      echo "   $command" >&3
-      echo "" >&3
-      printf "Allow this? [y/N] " >&3
-      exec 3>&-
-
-      # Read the answer from the terminal
-      read -r answer </dev/tty
-
-      if [[ "$answer" =~ ^[Yy]$ ]]; then
-        exit 0
-      else
-        echo "User denied recursive rm. Command was: $command"
-        exit 2
-      fi
+    # Match rm as a standalone word anywhere (inside quotes, after xargs/find -exec/
+    # env/then/do, /bin/rm, ...) with a recursive flag before the next ; & or |
+    if echo "$command" | grep -qE '(^|[^[:alnum:]_.-])rm[[:space:]]([^;&|]*[[:space:]])?(-[a-zA-Z]*[rR]|--recursive)'; then
+      python3 -c 'import json,sys; print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask", "permissionDecisionReason": "Recursive rm: confirm before running:\n" + sys.argv[1]}}))' "$command"
     fi
 
     exit 0

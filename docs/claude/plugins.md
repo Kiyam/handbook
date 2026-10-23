@@ -107,15 +107,29 @@ It needs `node` on the PATH of non-interactive shells for its hooks. Without it,
 
 ## Other plugins
 
-From the official `claude-plugins-official` marketplace, which is available by default:
+From the official `claude-plugins-official` marketplace, which is available by default. These are on everywhere:
 
 | Plugin | Why |
 |---|---|
-| `superpowers` | Process skills: brainstorming, writing plans, TDD, systematic debugging, checking work before calling it done. |
-| `code-review` | `/code-review` on a PR or the local diff. |
-| `github` | GitHub MCP server (issues, PRs, code search). |
 | `claude-md-management` | Audit and update `CLAUDE.md` files. |
-| `skill-creator` | Build and test new skills. |
-| `frontend-design` | Design guidance for UI work. |
+| `pyright-lsp` | Gives Claude Pyright's language server for Python: go-to-definition, references and type errors, instead of grepping. |
+| `session-report` | An HTML report of a session's token use, cache hits, subagents and skills, built from the transcripts in `~/.claude/projects`. |
 
-Plus [obsidian-cli](https://github.com/pablo-mano/Obsidian-CLI-skill) for reading and writing my Obsidian vault.
+And these are installed but **off by default**, switched on per project when a project needs them:
+
+| Plugin | Why it's off |
+|---|---|
+| `superpowers` | Process skills (brainstorming, plans, TDD, systematic debugging). Useful for big feature work, but it steers every session through its workflow, so it's too much as a default. |
+| `code-review`, `frontend-design`, `skill-creator`, `github` | Only needed now and then. |
+
+To turn one on for a single project, add it to that project's `.claude/settings.local.json`, which overrides the global setting:
+
+```json title="<project>/.claude/settings.local.json"
+{
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true
+  }
+}
+```
+
+The global on/off list lives in `settings.json`, which chezmoi manages. A small script installs the enabled plugins on each machine; see [One config, three machines](claude-code-setup.md#one-config-three-machines).

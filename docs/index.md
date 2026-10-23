@@ -9,14 +9,15 @@ Shell tools, editor and dotfiles.
 - [Terminal setup](terminal/terminal-setup.md) — Ghostty, zsh, chezmoi, fzf, zoxide, Atuin and friends
 - [Neovim](terminal/neovim.md) — what Vim/Neovim is, how to quit, and my LazyVim setup
 - [macOS extras](terminal/macos.md) — AeroSpace tiling, LinearMouse, Boring Notch, Mole
-- [tmux & Herdr](terminal/tmux-herdr.md) — Herdr with remote machines, plus my old tmux setup
+- [tmux & Herdr](terminal/tmux-herdr.md) — Herdr with plugins and remote machines, plus my old tmux setup
 - [Hunk](terminal/hunk.md) — terminal diff viewer for reviewing Claude's changes
 
 ## [Claude](claude/index.md)
 
-- [Claude Code setup](claude/claude-code-setup.md) — `CLAUDE.md` files, hooks and the statusline
+- [Claude Code setup](claude/claude-code-setup.md) — chezmoi-managed config, shared memory, hooks and the statusline
 - [Plugins](claude/plugins.md) — caveman, ponytail and friends
-- [Skills](claude/skills.md) — research skills, the skills CLI, Hunk's review skill
+- [Skills](claude/skills.md) — my skills, the skills CLI, Hunk's review skill
+- [Research wiki](claude/research.md) — literature wiki with Zotero, MCP servers and a nightly arXiv routine
 
 ## [HPC](hpc/index.md)
 

@@ -104,7 +104,15 @@ The workflow:
 4. Claude walks through the diff in your Hunk window: it moves the view, leaves notes on what changed and why, and highlights the risky lines. Step through them with `{` / `}` (previous / next annotated hunk).
 5. Reply to a note in Hunk (`c`, or `R` on a note), then ask Claude to read the notes with `hunk session comment list` and act on them.
 
-[Herdr](tmux-herdr.md#herdr) makes the side-by-side layout easy: Claude in one pane, `hunk diff --watch` in the next.
+### The other direction: my notes to Claude
+
+The [herdr-hunk-diff](tmux-herdr.md#plugins) plugin does the reverse of `/hunk`. With a Claude pane focused in [Herdr](tmux-herdr.md#herdr):
+
+1. `prefix` `H` opens a Hunk review of that agent's worktree in a pane beside it. `prefix` `A` reviews staged changes instead, and `prefix` `C` the last commit.
+2. Leave notes as usual with `c` on any line.
+3. `prefix` `S` sends every unsent note to that Claude session as one prompt, each tied to its file and line.
+
+So `/hunk` is Claude explaining its changes to me, and the plugin is me sending review comments back to Claude.
 
 !!! tip "The skill only controls Hunk, it doesn't open it"
     The skill tells Claude not to start `hunk diff` itself, because that's an interactive program for you. If Claude says there's no session, open Hunk in a terminal first.
