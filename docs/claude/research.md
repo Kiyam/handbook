@@ -2,7 +2,10 @@
 
 A literature knowledge base that Claude maintains for me: **Zotero** holds the papers, and a git-tracked folder of Markdown notes, `~/Research`, holds what I've learned from them. That covers what each paper does and assumes, how papers relate, how ideas changed over time, and the equations needed to implement them. I read it in [Obsidian](https://obsidian.md) on the Mac, and Claude reads and writes it with plain file tools on any machine.
 
-It's adapted from the "LLM Wiki" pattern as used in Florent Leclercq's [research_second_brain](https://git.aquila-consortium.org/fleclercq/research_second_brain).
+!!! info "Based on Florent Leclercq's setup"
+    This is adapted from Florent Leclercq's **research_second_brain**, an application of the "LLM Wiki" pattern to research literature. His repo is the original and the best place to start:
+
+    [git.aquila-consortium.org/fleclercq/research_second_brain](https://git.aquila-consortium.org/fleclercq/research_second_brain)
 
 ```mermaid
 flowchart LR
