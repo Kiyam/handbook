@@ -79,6 +79,20 @@ its index line, then commit and push. If the push is rejected, `pull --rebase` a
 push again. If the repo is missing, clone it from <private git URL>.
 ```
 
+To set it up:
+
+```bash
+# 1. a private repo on your git host, then on each machine:
+git clone <private git URL> ~/.claude/shared-memory
+# 2. start the index
+printf '%s\n' '- [Example fact](example-fact.md) — one-line summary Claude reads at session start' > ~/.claude/shared-memory/index.md
+```
+
+3. Add the `SessionStart` hook above to `~/.claude/settings.json`, and the instructions above to `~/.claude/CLAUDE.md`.
+4. Start a new session. The index should appear in the hook output, and from then on Claude adds memories to the repo itself.
+
+Each machine needs an SSH key that can push to the repo. The hook's `BatchMode=yes` means a key with a passphrase only works if it's already loaded in the agent.
+
 The repo itself is private: it holds hostnames and details about my network, which is exactly why it isn't in the public dotfiles.
 
 ## A `CLAUDE.md` per project

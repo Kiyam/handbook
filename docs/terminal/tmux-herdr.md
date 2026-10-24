@@ -61,6 +61,32 @@ The whole file, plugins included, is in my [chezmoi](terminal-setup.md#chezmoi) 
 | [vim-herdr-navigation](https://github.com/paulbkim-dev/vim-herdr-navigation) | `Ctrl+h/j/k/l` moves between Neovim splits and Herdr panes as if they were one grid. | `Ctrl+h/j/k/l` |
 | `kiyam.close-pane` (my own) | `prefix x` opens a small popup showing the pane's title, agent, folder and workspace, and only closes it on `y`. No more killing a running agent by accident. | `prefix x` |
 
+#### Installing them
+
+herdr-hunk-diff is written in TypeScript, so it needs **Node 22.12+** and npm on each machine. It also needs [Hunk](hunk.md) if you point it at the system copy (see the tip below):
+
+```bash
+herdr plugin install jhochenbaum/herdr-hunk-diff
+herdr plugin install paulbkim-dev/vim-herdr-navigation
+herdr plugin list                    # check they're installed and enabled
+herdr server reload-config           # after editing key bindings in config.toml
+```
+
+Then add the `[[keys.command]]` bindings from the config above. herdr-hunk-diff can also write its default bindings itself with `herdr plugin action invoke setup-keys --plugin jhochenbaum.hunkdiff`. It never overwrites a key that's already bound.
+
+**vim-herdr-navigation needs a Neovim half too.** Herdr handles `Ctrl+h/j/k/l` between panes, but inside Neovim the same keys must move between splits first and only hand over to Herdr at the edge. Copy the plugin's `editor/nvim.lua` to `~/.config/nvim/after/plugin/herdr-navigation.lua`. Files in `after/plugin/` load last, so they override other `Ctrl+h/j/k/l` mappings such as vim-tmux-navigator. Outside Herdr it falls back to tmux or plain window moves.
+
+**Remote panes need `PATH` from `.zshenv`.** `herdr --remote` starts the server in a non-interactive shell, which only reads `~/.zshenv`, not `.zshrc`. Plugins that call `node`, `hunk` or `jq` fail there unless their paths are set in `.zshenv`:
+
+```zsh title="~/.zshenv (excerpt)"
+typeset -U path
+path=($HOME/.local/bin $HOME/.hunk/bin $HOME/.nvm/versions/node/*/bin(Nn[-1]) $path)
+```
+
+`(Nn[-1])` is a zsh glob qualifier: it picks the newest nvm-installed Node version, and expands to nothing if there isn't one.
+
+#### Pinning
+
 Third-party plugins run code on every machine, so I read each one first and **pin it to the commit I reviewed**. A chezmoi `run_onchange` script installs them, and it reruns whenever a pinned ref changes:
 
 ```bash title="run_onchange_after_herdr-install-plugins.sh"
@@ -95,7 +121,14 @@ height = 12
 command = ["sh", "confirm.sh"]
 ```
 
-`confirm.sh` reads the focused pane from `$HERDR_PLUGIN_CONTEXT_JSON`, prints the details, waits for one key and runs `herdr pane close <id>` on `y`. `herdr plugin list` shows what's installed and where each one came from.
+`confirm.sh` reads the focused pane from `$HERDR_PLUGIN_CONTEXT_JSON`, prints the details, waits for one key and runs `herdr pane close <id>` on `y`. It needs `jq`. To build your own local plugin like this, make the folder with a manifest and script, then:
+
+```bash
+herdr plugin link ~/.config/herdr/close-pane    # register a local plugin folder
+herdr server reload-config
+```
+
+`herdr plugin list` shows what's installed and where each one came from.
 
 !!! tip
     herdr-hunk-diff bundles its own copy of Hunk. I point it at the system one with `bin = "~/.hunk/bin/hunk"` in `~/.config/herdr/plugins/config/jhochenbaum.hunkdiff/config.toml`, so there's only one Hunk version to keep updated.

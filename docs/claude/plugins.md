@@ -115,6 +115,14 @@ From the official `claude-plugins-official` marketplace, which is available by d
 | `pyright-lsp` | Gives Claude Pyright's language server for Python: go-to-definition, references and type errors, instead of grepping. |
 | `session-report` | An HTML report of a session's token use, cache hits, subagents and skills, built from the transcripts in `~/.claude/projects`. |
 
+Install them from inside Claude Code with `/plugin`, or from a shell:
+
+```bash
+claude plugin install claude-md-management@claude-plugins-official
+claude plugin install pyright-lsp@claude-plugins-official      # also needs pyright: npm i -g pyright
+claude plugin install session-report@claude-plugins-official
+```
+
 And these are installed but **off by default**, switched on per project when a project needs them:
 
 | Plugin | Why it's off |
