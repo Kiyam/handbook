@@ -119,7 +119,7 @@ Install them from inside Claude Code with `/plugin`, or from a shell:
 
 ```bash
 claude plugin install claude-md-management@claude-plugins-official
-claude plugin install pyright-lsp@claude-plugins-official      # also needs pyright: npm i -g pyright
+claude plugin install pyright-lsp@claude-plugins-official      # also needs pyright: uv tool install pyright
 claude plugin install session-report@claude-plugins-official
 ```
 
